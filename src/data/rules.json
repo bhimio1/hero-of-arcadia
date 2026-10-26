@@ -1,0 +1,8 @@
+{
+  "defensePerPoint": 0.1,
+  "luckMax": 1,
+  "captureStrength": { "healthy": 2, "wounded": 1, "woundedBelow": 0.5 },
+  "scorePerBuilding": 100,
+  "startingArmy": ["pikeman", "pikeman", "archer", "rider"],
+  "startingGold": 300
+}

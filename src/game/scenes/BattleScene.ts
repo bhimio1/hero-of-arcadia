@@ -3,8 +3,9 @@
 
 import Phaser from 'phaser';
 import { createAi, type AiController } from '../../core/ai';
-import { previewAttack, targetsFrom, terrainDefense, threatTiles } from '../../core/combat';
-import { getBuildingDef, getFaction, getUnitDef } from '../../core/data';
+import { previewAttack, targetsFrom, threatTiles } from '../../core/combat';
+import { getBuildingDef, getFaction } from '../../core/data';
+import { defenseBonus, rosterFor, statsOf } from '../../core/stats';
 import { playerView, visibilityMask } from '../../core/fog';
 import { canUndo, dispatch, newMatch, undo, type Match } from '../../core/match';
 import { makeSave, restoreMatch, type SaveData } from '../../core/save';
@@ -90,7 +91,7 @@ export class BattleScene extends Phaser.Scene {
     this.mapView = new MapView(this, state);
     const teamOf = (owner: number) => this.match.state.players[owner].faction;
     this.buildings = new BuildingLayer(this, teamOf);
-    this.units = new UnitLayer(this, teamOf);
+    this.units = new UnitLayer(this, teamOf, (u) => statsOf(this.match.state, u).maxHp);
     this.overlays = new Overlays(this);
     this.fog = new FogLayer(this, state.width, state.height);
     this.syncWorld();
@@ -402,7 +403,7 @@ export class BattleScene extends Phaser.Scene {
           this.select(unit);
         } else if (unit && unit.owner !== this.state.currentPlayer) {
           this.toggleInspect(unit);
-        } else if (!unit && b && b.owner === this.state.currentPlayer && getBuildingDef(b.type).produces.length > 0) {
+        } else if (!unit && b && b.owner === this.state.currentPlayer && rosterFor(this.state, b.owner, b.type).length > 0) {
           this.openBuildMenu(b);
         } else {
           this.clearInspect();
@@ -538,7 +539,7 @@ export class BattleScene extends Phaser.Scene {
     this.selected = { ...sel, unit };
     this.overlays.clear();
     this.mode = 'menu';
-    const def = getUnitDef(unit.type);
+    const def = statsOf(this.state, unit);
     const targets = targetsFrom(this.view, unit, unit);
     const canFire = !unit.moved || def.moveAndFire;
     const items: MenuItem[] = [];
@@ -592,13 +593,13 @@ export class BattleScene extends Phaser.Scene {
   private showPreview(unit: Unit, target: Unit): void {
     const p = previewAttack(this.state, unit, target);
     const side = (u: Unit, hpAfter: [number, number], deals: [number, number] | null) => ({
-      name: getUnitDef(u.type).name,
+      name: statsOf(this.state, u).name,
       faction: this.state.players[u.owner].faction,
       hp: u.hp,
       hpAfter,
       deals,
       terrain: terrainAt(this.state, u.x, u.y).name,
-      terrainDef: terrainDefense(this.state, u),
+      terrainDef: defenseBonus(this.state, u, u),
     });
     this.hud.showPreview(side(unit, p.attackerHpAfter, p.damage), side(target, p.defenderHpAfter, p.counter));
   }
@@ -647,8 +648,8 @@ export class BattleScene extends Phaser.Scene {
 
   private openBuildMenu(b: Building): void {
     this.clearInspect();
-    const def = getBuildingDef(b.type);
-    const gold = this.state.players[this.state.currentPlayer].gold;
+    const player = this.state.currentPlayer;
+    const gold = this.state.players[player].gold;
     sfx.play('select');
     this.mode = 'menu';
     this.overlays.moveCursor(b);
@@ -658,13 +659,14 @@ export class BattleScene extends Phaser.Scene {
       this.mode = 'idle';
       this.refreshInfo();
     };
-    const items: MenuItem[] = def.produces.map((type) => {
-      const u = getUnitDef(type);
+    const items: MenuItem[] = rosterFor(this.state, player, b.type).map((type) => {
+      const u = statsOf(this.state, { owner: player, type });
       return {
         label: u.name.toUpperCase(),
         detail: `${u.cost}G`,
         enabled: u.cost <= gold,
-        onHover: () => this.hud.setInfo({ terrain: null, unit: this.previewUnit(type, b), faction: this.state.players[this.state.currentPlayer].faction, blurb: u.blurb }),
+        onHover: () =>
+          this.hud.setInfo({ terrain: null, unit: this.previewUnit(type, b), stats: u, faction: this.state.players[player].faction, blurb: u.blurb }),
         onSelect: () => {
           close();
           void this.orderBuild(b, type);
@@ -682,7 +684,8 @@ export class BattleScene extends Phaser.Scene {
 
   /** A stand-in unit used to show stats in the info panel while browsing the build menu. */
   private previewUnit(type: string, at: Coord): Unit {
-    return { id: -1, type, owner: this.state.currentPlayer, x: at.x, y: at.y, hp: getUnitDef(type).maxHp, moved: false, acted: false };
+    const owner = this.state.currentPlayer;
+    return { id: -1, type, owner, x: at.x, y: at.y, hp: statsOf(this.state, { owner, type }).maxHp, moved: false, acted: false };
   }
 
   private async orderBuild(b: Building, type: string): Promise<void> {
@@ -1003,6 +1006,7 @@ export class BattleScene extends Phaser.Scene {
     this.hud.setInfo({
       terrain: terrainAt(this.state, this.hover.x, this.hover.y),
       unit,
+      stats: unit ? statsOf(this.state, unit) : undefined,
       faction: unit ? this.state.players[unit.owner].faction : undefined,
       building: b,
       buildingFaction: b && b.owner !== null ? this.state.players[b.owner].faction : undefined,

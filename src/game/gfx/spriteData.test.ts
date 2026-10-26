@@ -8,8 +8,8 @@ describe('sprite data', () => {
   });
 
   it('every unit has idle (2 frames) and attack sprites', () => {
-    for (const id of Object.keys(UNITS)) {
-      const s = SPRITES[`units/${id}`];
+    for (const [id, def] of Object.entries(UNITS)) {
+      const s = SPRITES[`units/${def.sprite ?? id}`];
       expect(s, id).toBeDefined();
       expect(s.frames.idle).toHaveLength(2);
       expect(s.frames.attack.length).toBeGreaterThan(0);

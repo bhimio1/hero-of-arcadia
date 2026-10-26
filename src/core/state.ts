@@ -1,7 +1,10 @@
-import { getBuildingDef, getMap, getTerrain, getUnitDef, parseMapTerrain } from './data';
+import { getBuildingDef, getMap, getTerrain, parseMapTerrain, RULES } from './data';
 import { hashSeed } from './rng';
 import { inBounds, toIndex } from './grid';
-import type { Building, BuildingDef, Controller, Coord, GameState, MapDef, TerrainDef, Unit, UnitDef } from './types';
+import { incomeOf, rosterType, statsOf, unitStatsFor } from './stats';
+import type { Building, BuildingDef, Controller, Coord, GameState, MapDef, TerrainDef, Unit } from './types';
+
+export { incomeOf } from './stats';
 
 export const STATE_VERSION = 1;
 
@@ -34,16 +37,21 @@ export function createGame(setup: GameSetup, mapOverride?: MapDef): GameState {
     stats: { kills: 0, losses: 0, built: 0, captured: 0 },
   }));
   let nextUnitId = 1;
-  const units: Unit[] = map.units.map((u) => ({
-    id: nextUnitId++,
-    type: u.type,
-    owner: u.owner,
-    x: u.x,
-    y: u.y,
-    hp: u.hp ?? getUnitDef(u.type).maxHp,
-    moved: false,
-    acted: false,
-  }));
+  const units: Unit[] = map.units.map((u) => {
+    // factions field their own versions of standard units (e.g. rangers instead of archers)
+    const faction = players[u.owner].faction;
+    const type = rosterType(faction, u.type);
+    return {
+      id: nextUnitId++,
+      type,
+      owner: u.owner,
+      x: u.x,
+      y: u.y,
+      hp: u.hp ?? unitStatsFor(faction, type).maxHp,
+      moved: false,
+      acted: false,
+    };
+  });
   const buildings: Building[] = (map.buildings ?? []).map((b, i) => ({
     id: i + 1,
     type: b.type,
@@ -74,23 +82,16 @@ export function createGame(setup: GameSetup, mapOverride?: MapDef): GameState {
   return state;
 }
 
-/** Battle score used when the day limit runs out: army value plus 100 per building held. */
+/** Battle score used when the day limit runs out: army value plus a bonus per building held. */
 export function scoreOf(state: GameState, player: number): number {
   let score = 0;
   for (const u of state.units) {
     if (u.owner !== player) continue;
-    const def = getUnitDef(u.type);
+    const def = statsOf(state, u);
     score += (def.cost * u.hp) / def.maxHp;
   }
-  for (const b of state.buildings) if (b.owner === player) score += 100;
+  for (const b of state.buildings) if (b.owner === player) score += RULES.scorePerBuilding;
   return Math.round(score);
-}
-
-/** Gold a player collects at the start of their turn. */
-export function incomeOf(state: GameState, player: number): number {
-  let total = 0;
-  for (const b of state.buildings) if (b.owner === player) total += getBuildingDef(b.type).income;
-  return total;
 }
 
 export function cloneState(state: GameState): GameState {
@@ -147,15 +148,6 @@ export function groundAt(state: GameState, x: number, y: number): TerrainDef {
 
 export function isInside(state: GameState, c: Coord): boolean {
   return inBounds(state.width, state.height, c.x, c.y);
-}
-
-export function unitDef(unit: Unit): UnitDef {
-  return getUnitDef(unit.type);
-}
-
-/** Movement point cost for a move type to enter a tile, or undefined if impassable. */
-export function moveCostAt(state: GameState, moveType: UnitDef['moveType'], x: number, y: number): number | undefined {
-  return terrainAt(state, x, y).moveCost[moveType];
 }
 
 export function unitsOf(state: GameState, player: number): Unit[] {

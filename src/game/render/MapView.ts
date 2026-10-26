@@ -40,11 +40,17 @@ export class MapView {
   }
 
   private isWet(id: string | null): boolean {
-    return id === 'water' || id === 'ford' || id === 'bridge';
+    const a = id === null ? undefined : getTerrain(id).autotile;
+    return a === 'water' || a === 'bridge';
   }
 
   private isRoadLike(id: string | null): boolean {
-    return id === 'road' || id === 'bridge';
+    const a = id === null ? undefined : getTerrain(id).autotile;
+    return a === 'road' || a === 'bridge';
+  }
+
+  private isBridge(id: string | null): boolean {
+    return id !== null && getTerrain(id).autotile === 'bridge';
   }
 
   private image(x: number, y: number, key: string, frame: string): Phaser.GameObjects.Image {
@@ -87,7 +93,7 @@ export class MapView {
             this.animated(x, y, 'terrain/water');
             this.shore(x, y);
             const horizontal = !this.isWet(this.terrainId(x - 1, y)) || !this.isWet(this.terrainId(x + 1, y)) ||
-              this.terrainId(x - 1, y) === 'bridge' || this.terrainId(x + 1, y) === 'bridge';
+              this.isBridge(this.terrainId(x - 1, y)) || this.isBridge(this.terrainId(x + 1, y));
             this.image(x, y, 'terrain/bridge', horizontal ? 'horizontal0' : 'horizontal0@1');
             break;
           }

@@ -63,6 +63,16 @@
   Also: How to Play screen with tables generated from the data files, PNG overrides
   for hand-drawn unit/building art, README with screenshots and modding guide.
 
+- **M9 — Data-driven core.** All content flows through a layered content system: packs
+  (the base game, later mods) are merged by id (patch a single field, add entries, remove
+  entries), then validated as a whole with precise error paths; a broken map is dropped
+  with a warning instead of breaking the game. Movement types, game constants
+  (`rules.json`), terrain flags and minimap colours, AI building values and unit tags are
+  data. A faction effects engine (`stats.ts`) computes every effective number — unit
+  stats and costs, movement costs, terrain defense, damage bonuses, income, healing,
+  capture strength and rosters — from base data plus faction perks, cached per content
+  version. Rules, AI, fog and UI all read effective values.
+
 ## Next
 
 - Enable GitHub Pages (Settings → Pages → Source: GitHub Actions) so the web build goes live.

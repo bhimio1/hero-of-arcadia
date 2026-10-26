@@ -2,9 +2,9 @@
 // bonus); forest hides units from anyone not standing right next to them. Owned buildings
 // always see their own tile. With fog off, everything is visible.
 
-import { getUnitDef } from './data';
 import { tilesInRange, toIndex } from './grid';
 import { cloneState, terrainAt } from './state';
+import { statsOf } from './stats';
 import type { GameState, Unit } from './types';
 
 /** Row-major visibility mask for `player` (true = visible). */
@@ -14,7 +14,7 @@ export function visibilityMask(state: GameState, player: number): boolean[] {
   if (!state.options.fog) return mask;
   for (const u of state.units) {
     if (u.owner !== player) continue;
-    const range = getUnitDef(u.type).vision + (terrainAt(state, u.x, u.y).visionBonus ?? 0);
+    const range = statsOf(state, u).vision + (terrainAt(state, u.x, u.y).visionBonus ?? 0);
     mask[toIndex(state.width, u.x, u.y)] = true;
     for (const t of tilesInRange(state.width, state.height, u, 1, range)) {
       const dist = Math.abs(t.x - u.x) + Math.abs(t.y - u.y);

@@ -1,7 +1,6 @@
 // Unit sprites: team-coloured idle animations, HP numbers, and move/attack animations.
 
 import Phaser from 'phaser';
-import { getUnitDef } from '../../core/data';
 import type { Coord, GameState, Unit } from '../../core/types';
 import { TILE } from '../config';
 import { unitTextureKey } from '../gfx/bake';
@@ -31,7 +30,7 @@ class UnitSprite extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
-  apply(unit: Unit, team: string, facingLeft: boolean): void {
+  apply(unit: Unit, team: string, facingLeft: boolean, max: number): void {
     const dim = unit.acted;
     if (this.team !== team || this.unitType !== unit.type || this.dim !== dim) {
       this.team = team;
@@ -44,7 +43,6 @@ class UnitSprite extends Phaser.GameObjects.Container {
       this.sprite.anims.setProgress(progress);
     }
     this.sprite.setFlipX(facingLeft);
-    const max = getUnitDef(unit.type).maxHp;
     const shown = Math.ceil(unit.hp);
     this.hp.setVisible(unit.hp < max);
     if (shown < 10) this.hp.setFrame(`d${Math.max(0, shown)}`);
@@ -55,7 +53,11 @@ export class UnitLayer {
   private sprites = new Map<number, UnitSprite>();
   speed: AnimSpeed = { step: 70, fx: 1 };
 
-  constructor(private scene: Phaser.Scene, private teamOf: (owner: number) => string) {}
+  constructor(
+    private scene: Phaser.Scene,
+    private teamOf: (owner: number) => string,
+    private maxHpOf: (unit: Unit) => number,
+  ) {}
 
   private defaultFacingLeft(owner: number): boolean {
     return owner % 2 === 1;
@@ -75,7 +77,7 @@ export class UnitLayer {
       }
       s.setPosition(u.x * TILE, u.y * TILE);
       s.setDepth(DEPTH_UNITS + u.y);
-      s.apply(u, this.teamOf(u.owner), s.facingLeft);
+      s.apply(u, this.teamOf(u.owner), s.facingLeft, this.maxHpOf(u));
       s.setVisible(true);
       s.setAlpha(1);
     }
@@ -98,7 +100,7 @@ export class UnitLayer {
     s.facingLeft = this.defaultFacingLeft(unit.owner);
     s.setPosition(at.x * TILE, at.y * TILE);
     s.setDepth(DEPTH_UNITS + at.y);
-    s.apply(unit, this.teamOf(unit.owner), s.facingLeft);
+    s.apply(unit, this.teamOf(unit.owner), s.facingLeft, this.maxHpOf(unit));
     this.sprites.set(unit.id, s);
   }
 

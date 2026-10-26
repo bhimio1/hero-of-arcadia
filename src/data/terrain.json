@@ -1,10 +1,10 @@
 [
-  {"id": "plains", "name": "Plains", "char": ".", "defense": 0, "moveCost": {"foot": 1, "mounted": 1, "wheeled": 1}, "sprite": "plains"},
-  {"id": "road", "name": "Road", "char": "=", "defense": 0, "moveCost": {"foot": 1, "mounted": 1, "wheeled": 1}, "sprite": "plains", "autotile": "road"},
-  {"id": "bridge", "name": "Bridge", "char": "b", "defense": 0, "moveCost": {"foot": 1, "mounted": 1, "wheeled": 1}, "sprite": "water", "autotile": "bridge"},
-  {"id": "forest", "name": "Forest", "char": "f", "defense": 2, "hides": true, "moveCost": {"foot": 1, "mounted": 2, "wheeled": 3}, "sprite": "forest"},
-  {"id": "hills", "name": "Hills", "char": "h", "defense": 2, "visionBonus": 1, "moveCost": {"foot": 2, "mounted": 2, "wheeled": 3}, "sprite": "hills"},
-  {"id": "mountain", "name": "Mountain", "char": "^", "defense": 4, "visionBonus": 2, "moveCost": {"foot": 3}, "sprite": "mountain"},
-  {"id": "ford", "name": "Ford", "char": ":", "defense": -1, "moveCost": {"foot": 2, "mounted": 2}, "sprite": "ford", "autotile": "water"},
-  {"id": "water", "name": "River", "char": "~", "defense": 0, "moveCost": {}, "sprite": "water", "autotile": "water"}
+  {"id": "plains", "name": "Plains", "char": ".", "defense": 0, "moveCost": {"foot": 1, "mounted": 1, "wheeled": 1}, "sprite": "plains", "minimap": 10},
+  {"id": "road", "name": "Road", "char": "=", "defense": 0, "moveCost": {"foot": 1, "mounted": 1, "wheeled": 1}, "sprite": "plains", "autotile": "road", "minimap": 6},
+  {"id": "bridge", "name": "Bridge", "char": "b", "defense": 0, "moveCost": {"foot": 1, "mounted": 1, "wheeled": 1}, "sprite": "water", "autotile": "bridge", "minimap": 4},
+  {"id": "forest", "name": "Forest", "char": "f", "defense": 2, "hides": true, "moveCost": {"foot": 1, "mounted": 2, "wheeled": 3}, "sprite": "forest", "minimap": 12},
+  {"id": "hills", "name": "Hills", "char": "h", "defense": 2, "visionBonus": 1, "moveCost": {"foot": 2, "mounted": 2, "wheeled": 3}, "sprite": "hills", "minimap": 30},
+  {"id": "mountain", "name": "Mountain", "char": "^", "defense": 4, "visionBonus": 2, "moveCost": {"foot": 3}, "sprite": "mountain", "minimap": 23},
+  {"id": "ford", "name": "Ford", "char": ":", "defense": -1, "moveCost": {"foot": 2, "mounted": 2}, "sprite": "ford", "autotile": "water", "minimap": 19},
+  {"id": "water", "name": "River", "char": "~", "defense": 0, "moveCost": {}, "sprite": "water", "autotile": "water", "minimap": 17}
 ]

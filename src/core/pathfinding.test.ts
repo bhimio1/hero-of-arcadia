@@ -75,7 +75,7 @@ describe('movement range', () => {
     const path = pathTo(reach, { x: 2, y: 0 })!;
     expect(path[0]).toEqual({ x: 0, y: 0 });
     expect(path[path.length - 1]).toEqual({ x: 2, y: 0 });
-    expect(pathCost(s, 'mounted', path)).toBe(reach.cost.get(2));
+    expect(pathCost(s, 0, 'mounted', path)).toBe(reach.cost.get(2));
     expect(pathTo(reach, { x: 2, y: 2 })).toBeNull();
   });
 
@@ -88,14 +88,14 @@ describe('movement range', () => {
 
   it('rejects malformed paths', () => {
     const s = makeGame(['..~.'], [{ type: 'pikeman', owner: 0, x: 0, y: 0 }, { type: 'pikeman', owner: 1, x: 3, y: 0 }]);
-    expect(pathCost(s, 'foot', [{ x: 0, y: 0 }, { x: 2, y: 0 }])).toBeNull(); // not adjacent
-    expect(pathCost(s, 'foot', [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }])).toBeNull(); // water
-    expect(pathCost(s, 'foot', [{ x: 0, y: 0 }, { x: 1, y: 0 }])).toBe(1);
+    expect(pathCost(s, 0, 'foot', [{ x: 0, y: 0 }, { x: 2, y: 0 }])).toBeNull(); // not adjacent
+    expect(pathCost(s, 0, 'foot', [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }])).toBeNull(); // water
+    expect(pathCost(s, 0, 'foot', [{ x: 0, y: 0 }, { x: 1, y: 0 }])).toBe(1);
   });
 
   it('builds distance fields toward goals', () => {
     const s = makeGame(['...f.'], [{ type: 'pikeman', owner: 0, x: 0, y: 0 }, { type: 'pikeman', owner: 1, x: 4, y: 0 }]);
-    const d = distanceField(s, 'mounted', [{ x: 4, y: 0 }]);
+    const d = distanceField(s, 0, 'mounted', [{ x: 4, y: 0 }]);
     // walking from x=0 to x=4 as a rider enters (1),(2),(3 forest=2),(4) = 1+1+2+1
     expect(d[0]).toBe(5);
     expect(d[4]).toBe(0);

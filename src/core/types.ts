@@ -6,13 +6,54 @@ export interface Coord {
   y: number;
 }
 
-export type MoveType = 'foot' | 'mounted' | 'wheeled';
-export const MOVE_TYPES: readonly MoveType[] = ['foot', 'mounted', 'wheeled'];
+/** Movement class id from moveTypes.json (e.g. "foot", "mounted", "wheeled"). */
+export type MoveType = string;
 
 export type Controller = 'human' | 'ai';
 
 // ---------------------------------------------------------------------------
-// Static definitions (loaded from src/data/*.json)
+// Static definitions (loaded from src/data/*.json and mods)
+
+/** One rule of a biome: tiles whose noise values fall in the given ranges become `terrain`. */
+export interface BiomeLayer {
+  terrain: string;
+  /** Inclusive-exclusive [from, to) ranges in 0..1; a missing range matches anything. */
+  elevation?: [number, number];
+  moisture?: [number, number];
+}
+
+/** Recipe for procedurally generated maps (biomes.json). Layers are tried in order. */
+export interface BiomeDef {
+  id: string;
+  name: string;
+  desc?: string;
+  layers: BiomeLayer[];
+  /** Rivers to carve (each is mirrored for fairness). */
+  rivers: number;
+  /** Feature size of the noise; larger values make bigger blobs of forest, hills... */
+  scale?: number;
+}
+
+export interface MoveTypeDef {
+  id: string;
+  name: string;
+}
+
+/** Game-wide constants (rules.json). Mods can override any of them. */
+export interface RulesDef {
+  /** Damage reduction per point of defense (0.1 = 10%). */
+  defensePerPoint: number;
+  /** Extra damage a strike may roll when the luck option is on. */
+  luckMax: number;
+  /** Capture points per capture action for healthy and wounded units. */
+  captureStrength: { healthy: number; wounded: number; woundedBelow: number };
+  /** Day-limit score per building held. */
+  scorePerBuilding: number;
+  /** Army each player starts with on generated maps. */
+  startingArmy: string[];
+  /** Gold each player starts with on generated maps. */
+  startingGold: number;
+}
 
 export interface TerrainDef {
   id: string;
@@ -29,6 +70,8 @@ export interface TerrainDef {
   visionBonus?: number;
   sprite: string;
   autotile?: 'road' | 'bridge' | 'water';
+  /** Palette index used for map thumbnails. */
+  minimap?: number;
 }
 
 export interface UnitDef {
@@ -50,6 +93,10 @@ export interface UnitDef {
   canCapture: boolean;
   /** Damage multipliers against specific unit types. */
   bonusVs: Record<string, number>;
+  /** Free-form labels (e.g. "infantry", "cavalry", "ranged") that faction perks can target. */
+  tags: string[];
+  /** Sprite id under sprites/units (defaults to the unit id). */
+  sprite?: string;
   blurb: string;
 }
 
@@ -71,7 +118,46 @@ export interface BuildingDef {
   /** Unit types that can be built here. */
   produces: string[];
   moveCost: Partial<Record<MoveType, number>>;
+  /** How much the AI wants to capture this building (gold-equivalent). */
+  aiValue: number;
+  /** Sprite id under sprites/buildings (defaults to the building id). */
+  sprite?: string;
   blurb: string;
+}
+
+/** Which units an effect applies to: listed ids and/or tags (neither = every unit). */
+export interface UnitFilter {
+  units?: string[];
+  tags?: string[];
+}
+
+export type UnitStat = 'attack' | 'defense' | 'move' | 'vision' | 'maxHp' | 'rangeMin' | 'rangeMax';
+
+/** A single rule change granted by a faction perk. All numbers are applied in data order. */
+export type Effect =
+  | ({ type: 'unitStat'; stat: UnitStat; add?: number; mul?: number } & UnitFilter)
+  | ({ type: 'unitCost'; add?: number; mul?: number } & UnitFilter)
+  | { type: 'moveCost'; terrain: string[]; moveTypes?: string[]; set?: number | null; add?: number }
+  | ({ type: 'terrainDefense'; terrain?: string[]; ownBuildings?: boolean; add: number } & UnitFilter)
+  | { type: 'income'; add?: number; mul?: number }
+  | { type: 'heal'; buildings?: number; anywhere?: number }
+  | ({ type: 'captureStrength'; add: number } & UnitFilter)
+  | ({ type: 'damageVs'; vs: UnitFilter; mul: number } & UnitFilter);
+
+export interface PerkDef {
+  name: string;
+  /** Shown in the faction picker; generated from the effects when missing. */
+  desc?: string;
+  effects: Effect[];
+}
+
+export interface RosterDef {
+  /** Swap a standard unit for a faction unit everywhere (barracks and map armies). */
+  replace?: Record<string, string>;
+  /** Extra units every production building can raise for this faction. */
+  add?: string[];
+  /** Units this faction can never raise. */
+  remove?: string[];
 }
 
 export interface FactionDef {
@@ -80,6 +166,9 @@ export interface FactionDef {
   short: string;
   /** Palette indices [light, mid, dark] used to recolor team pixels. */
   ramp: [number, number, number];
+  blurb?: string;
+  perks?: PerkDef[];
+  roster?: RosterDef;
 }
 
 // ---------------------------------------------------------------------------

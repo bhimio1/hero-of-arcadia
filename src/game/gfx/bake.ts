@@ -10,6 +10,7 @@
 import Phaser from 'phaser';
 import { SPRITE_OVERRIDES, SPRITES, gridSize, gridToRGBA, rotateGrid, type Grid, type SpriteFile } from './spriteData';
 import { PALETTE_RGB, TEAM_IDS, TEAM_RAMPS } from './palette';
+import { BUILDINGS, UNITS } from '../../core/data';
 
 interface FrameSpec {
   name: string;
@@ -144,12 +145,15 @@ export function bakeAllSprites(scene: Phaser.Scene): void {
   }
 }
 
+/** Texture key for a unit type, honouring a `sprite` field that points at another sprite. */
 export function unitTextureKey(type: string, team: string, dim = false): string {
-  return `units/${type}:${team}${dim ? ':dim' : ''}`;
+  const sprite = UNITS[type]?.sprite ?? type;
+  return `units/${sprite}:${team}${dim ? ':dim' : ''}`;
 }
 
 export function buildingTextureKey(type: string, team: string, dim = false): string {
-  return `buildings/${type}:${team}${dim ? ':dim' : ''}`;
+  const sprite = BUILDINGS[type]?.sprite ?? type;
+  return `buildings/${sprite}:${team}${dim ? ':dim' : ''}`;
 }
 
 /** A plain 1x1 white texture used for tinted rectangles. */

@@ -4,16 +4,16 @@
 import { targetsFrom } from './combat';
 import { visibilityMask } from './fog';
 import { toIndex } from './grid';
-import { getBuildingDef, getUnitDef } from './data';
 import { computeReach, destinations, pathTo } from './pathfinding';
 import { buildingAt, unitAt } from './state';
+import { rosterFor, statsOf } from './stats';
 import type { Action, GameState, Unit } from './types';
 
 /** All actions available to one unit of the current player. */
 export function unitActions(state: GameState, unit: Unit): Action[] {
   if (state.gameOver || unit.owner !== state.currentPlayer || unit.acted) return [];
   const out: Action[] = [];
-  const def = getUnitDef(unit.type);
+  const def = statsOf(state, unit);
   if (!unit.moved) {
     const reach = computeReach(state, unit);
     for (const d of destinations(state, unit, reach)) {
@@ -39,9 +39,10 @@ export function unitActions(state: GameState, unit: Unit): Action[] {
 export function buildActions(state: GameState, buildingId: number): Action[] {
   const b = state.buildings.find((x) => x.id === buildingId);
   if (!b || state.gameOver || b.owner !== state.currentPlayer || unitAt(state, b.x, b.y)) return [];
-  const gold = state.players[state.currentPlayer].gold;
-  return getBuildingDef(b.type)
-    .produces.filter((t) => getUnitDef(t).cost <= gold)
+  const player = state.currentPlayer;
+  const gold = state.players[player].gold;
+  return rosterFor(state, player, b.type)
+    .filter((t) => statsOf(state, { owner: player, type: t }).cost <= gold)
     .map((unitType) => ({ type: 'build', buildingId: b.id, unitType }));
 }
 

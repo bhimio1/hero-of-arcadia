@@ -5,19 +5,18 @@
 //             penalty for ending where enemies can hit it next turn
 // It sees only the `view` it is given, so it cannot cheat through fog of war.
 
-import { baseDamage, previewAttack, rawDamage, targetsFrom, terrainDefense, threatTiles } from '../combat';
-import { getBuildingDef, getUnitDef } from '../data';
-import { captureStrength } from '../rules';
+import { baseDamage, previewAttack, rawDamage, targetsFrom, threatTiles } from '../combat';
+import { getBuildingDef } from '../data';
 import { tilesInRange, toIndex } from '../grid';
 import { computeReach, destinations, distanceField, pathTo } from '../pathfinding';
-import { buildingAt, moveCostAt, unitAt } from '../state';
+import { buildingAt, unitAt } from '../state';
+import { captureStrength, defenseBonus, factionOf, moveCostFor, rosterFor, statsOf } from '../stats';
 import type { Action, Building, Coord, GameState, Unit } from '../types';
 import type { AiController } from './types';
 
 const PROGRESS_WEIGHT = 6;
 const TERRAIN_WEIGHT = 2;
 const ATTACK_BIAS = 5;
-const BUILDING_VALUE: Record<string, number> = { keep: 600, barracks: 260, village: 160 };
 
 interface Plan {
   unit: Unit;
@@ -62,14 +61,14 @@ class Context {
 
   /** Distance field (in movement points) toward tiles from which `unit` could attack an enemy. */
   goalField(unit: Unit): number[] {
-    const def = getUnitDef(unit.type);
+    const def = statsOf(this.view, unit);
     const key = unit.type;
     const cached = this.fields.get(key);
     if (cached) return cached;
     const goals: Coord[] = [];
     for (const e of this.enemies) {
       for (const t of tilesInRange(this.view.width, this.view.height, e, def.range[0], def.range[1])) {
-        if (moveCostAt(this.view, def.moveType, t.x, t.y) !== undefined) goals.push(t);
+        if (moveCostFor(this.view, this.me, def.moveType, t.x, t.y) !== undefined) goals.push(t);
       }
     }
     if (def.canCapture) {
@@ -80,7 +79,7 @@ class Context {
       for (const b of this.view.buildings) if (b.owner !== null && b.owner !== this.me) goals.push({ x: b.x, y: b.y });
       if (goals.length === 0) goals.push({ x: Math.floor(this.view.width / 2), y: Math.floor(this.view.height / 2) });
     }
-    const field = distanceField(this.view, def.moveType, goals);
+    const field = distanceField(this.view, this.me, def.moveType, goals);
     this.fields.set(key, field);
     return field;
   }
@@ -117,7 +116,7 @@ export class GreedyAi implements AiController {
 
   private planUnit(ctx: Context, unit: Unit): Plan {
     const view = ctx.view;
-    const def = getUnitDef(unit.type);
+    const def = statsOf(view, unit);
     const here = { x: unit.x, y: unit.y };
     const reach = unit.moved ? null : computeReach(view, unit);
     const dests = reach ? destinations(view, unit, reach) : [here];
@@ -136,7 +135,7 @@ export class GreedyAi implements AiController {
       if (def.canCapture) {
         const b = buildingAt(view, d.x, d.y);
         if (b && b.owner !== unit.owner) {
-          consider({ unit, path, action: { type: 'capture', unitId: unit.id }, score: pos + this.captureScore(unit, b) });
+          consider({ unit, path, action: { type: 'capture', unitId: unit.id }, score: pos + this.captureScore(view, unit, b) });
         }
       }
       const canFire = def.moveAndFire || (!unit.moved && !moving);
@@ -149,13 +148,13 @@ export class GreedyAi implements AiController {
     return best;
   }
 
-  private captureScore(unit: Unit, b: Building): number {
+  private captureScore(view: GameState, unit: Unit, b: Building): number {
     const def = getBuildingDef(b.type);
-    let value = BUILDING_VALUE[b.type] ?? 150;
+    let value = def.aiValue;
     if (b.owner !== null) value *= 1.25; // taking it also cuts the enemy's income
     const progress = b.capture?.unitId === unit.id ? b.capture.points : 0;
     if (progress > 0) value += 120; // never abandon a half-finished capture lightly
-    if (progress + captureStrength(unit) >= def.capturePoints) value += 100;
+    if (progress + captureStrength(view, unit) >= def.capturePoints) value += 100;
     return value * 0.5;
   }
 
@@ -168,11 +167,11 @@ export class GreedyAi implements AiController {
     const capturable = view.buildings.filter((b) => b.owner !== me).length;
     for (const b of view.buildings) {
       if (b.owner !== me || unitAt(view, b.x, b.y)) continue;
-      const options = getBuildingDef(b.type).produces.filter((t) => getUnitDef(t).cost <= gold);
+      const options = rosterFor(view, me, b.type).filter((t) => statsOf(view, { owner: me, type: t }).cost <= gold);
       let best: string | null = null;
       let bestScore = -Infinity;
       for (const t of options) {
-        const score = this.buildScore(t, enemies, mine, capturable, gold);
+        const score = this.buildScore(view, t, enemies, mine, capturable, gold);
         if (score > bestScore) {
           bestScore = score;
           best = t;
@@ -184,22 +183,25 @@ export class GreedyAi implements AiController {
   }
 
   /** How useful a new unit of `type` would be against the enemies in sight, per gold spent. */
-  private buildScore(type: string, enemies: Unit[], mine: Unit[], capturable: number, gold: number): number {
-    const def = getUnitDef(type);
+  private buildScore(view: GameState, type: string, enemies: Unit[], mine: Unit[], capturable: number, gold: number): number {
+    const me = view.currentPlayer;
+    const myFaction = factionOf(view, me);
+    const def = statsOf(view, { owner: me, type });
     let score = 0;
     for (const e of enemies) {
-      const ed = getUnitDef(e.type);
-      const dealt = rawDamage(type, e.type) * (ed.cost / ed.maxHp);
+      const ed = statsOf(view, e);
+      const theirFaction = factionOf(view, e.owner);
+      const dealt = rawDamage(type, e.type, myFaction, theirFaction) * (ed.cost / ed.maxHp);
       // ranged units take no counter from melee targets
       const countered = ed.counter && ed.range[0] <= def.range[0];
-      const taken = (countered ? rawDamage(e.type, type) : 0) * (def.cost / def.maxHp);
+      const taken = (countered ? rawDamage(e.type, type, theirFaction, myFaction) : 0) * (def.cost / def.maxHp);
       score += dealt - 0.5 * taken;
     }
     score = (score / Math.max(1, enemies.length) / def.cost) * 10;
     // with a full treasury, prefer stronger (pricier) troops over cheap ones
     const richness = Math.min(1, gold / 1200);
     score += (def.cost / 100) * richness * 1.5;
-    const capturers = mine.filter((u) => getUnitDef(u.type).canCapture).length;
+    const capturers = mine.filter((u) => statsOf(view, u).canCapture).length;
     if (def.canCapture && capturable > 0 && capturers < 3) score += 3;
     score -= mine.filter((u) => u.type === type).length * 0.4;
     return score;
@@ -207,8 +209,8 @@ export class GreedyAi implements AiController {
 
   private attackScore(view: GameState, unit: Unit, target: Unit, from: Coord): number {
     const p = previewAttack(view, unit, target, from);
-    const me = getUnitDef(unit.type);
-    const them = getUnitDef(target.type);
+    const me = statsOf(view, unit);
+    const them = statsOf(view, target);
     let value = (Math.min(target.hp, avg(p.damage)) * them.cost) / them.maxHp;
     if (p.defenderHpAfter[1] === 0) value += them.cost * 0.5;
     else if (p.defenderHpAfter[0] === 0) value += them.cost * 0.25;
@@ -221,18 +223,18 @@ export class GreedyAi implements AiController {
 
   private positionScore(ctx: Context, unit: Unit, at: Coord, field: number[], distHere: number): number {
     const view = ctx.view;
-    const def = getUnitDef(unit.type);
+    const def = statsOf(view, unit);
     const dist = field[toIndex(view.width, at.x, at.y)];
     let score = 0;
     const b = buildingAt(view, at.x, at.y);
-    if (b && b.owner === unit.owner && getBuildingDef(b.type).produces.length > 0) score -= 15; // keep the yard clear
+    if (b && b.owner === unit.owner && rosterFor(view, unit.owner, b.type).length > 0) score -= 15; // keep the yard clear
     if (b && b.owner !== unit.owner && !def.canCapture) score -= 20; // leave it for a unit that can take it
     if (Number.isFinite(distHere) && Number.isFinite(dist)) score += (distHere - dist) * PROGRESS_WEIGHT;
     else if (Number.isFinite(dist)) score += PROGRESS_WEIGHT;
     const threat = Math.min(unit.hp, ctx.threatAt(unit, at));
     if (threat > 0) {
       // cover only matters where the unit can actually be hit
-      score += terrainDefense(view, at) * TERRAIN_WEIGHT;
+      score += defenseBonus(view, unit, at) * TERRAIN_WEIGHT;
       // fragile ranged units hang back; melee units accept a scratch to close in
       const ranged = def.range[1] > 1;
       const base = ranged ? 0.8 : 0.25;

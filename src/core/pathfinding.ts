@@ -1,6 +1,5 @@
 import { DIRECTIONS, fromIndex, inBounds, toIndex } from './grid';
-import { getUnitDef } from './data';
-import { moveCostAt } from './state';
+import { moveCostFor, statsOf } from './stats';
 import type { Coord, GameState, MoveType, Unit } from './types';
 
 /** Min-heap keyed by (priority, insertion order) so ties resolve deterministically. */
@@ -73,7 +72,7 @@ export interface ReachOptions {
  * friendly units can be passed through (but not stopped on, see `destinations`).
  */
 export function computeReach(state: GameState, unit: Unit, opts: ReachOptions = {}): Reach {
-  const def = getUnitDef(unit.type);
+  const def = statsOf(state, unit);
   const budget = opts.budget ?? def.move;
   const { width, height } = state;
   const blocked = new Set<number>();
@@ -97,7 +96,7 @@ export function computeReach(state: GameState, unit: Unit, opts: ReachOptions = 
       if (!inBounds(width, height, nx, ny)) continue;
       const ni = toIndex(width, nx, ny);
       if (blocked.has(ni)) continue;
-      const step = moveCostAt(state, def.moveType, nx, ny);
+      const step = moveCostFor(state, unit.owner, def.moveType, nx, ny);
       if (step === undefined) continue;
       const total = p + step;
       if (total > budget) continue;
@@ -136,17 +135,18 @@ export function pathTo(reach: Reach, target: Coord): Coord[] | null {
 }
 
 /**
- * Movement cost of following `path` (first element = current position), or null if the
- * path is malformed or crosses impassable terrain. Does not look at units.
+ * Movement cost for `player`'s units of `moveType` to follow `path` (first element =
+ * current position), or null if the path is malformed or crosses impassable terrain.
+ * Does not look at units.
  */
-export function pathCost(state: GameState, moveType: MoveType, path: Coord[]): number | null {
+export function pathCost(state: GameState, player: number, moveType: MoveType, path: Coord[]): number | null {
   let total = 0;
   for (let i = 1; i < path.length; i++) {
     const a = path[i - 1];
     const b = path[i];
     if (Math.abs(a.x - b.x) + Math.abs(a.y - b.y) !== 1) return null;
     if (!inBounds(state.width, state.height, b.x, b.y)) return null;
-    const step = moveCostAt(state, moveType, b.x, b.y);
+    const step = moveCostFor(state, player, moveType, b.x, b.y);
     if (step === undefined) return null;
     total += step;
   }
@@ -154,10 +154,10 @@ export function pathCost(state: GameState, moveType: MoveType, path: Coord[]): n
 }
 
 /**
- * Multi-source distance field: for every tile, the movement cost for `moveType` to reach
- * the nearest goal tile. Unreachable tiles are Infinity. Units are ignored.
+ * Multi-source distance field: for every tile, the movement cost for `player`'s units of
+ * `moveType` to reach the nearest goal tile. Unreachable tiles are Infinity. Units are ignored.
  */
-export function distanceField(state: GameState, moveType: MoveType, goals: Coord[]): number[] {
+export function distanceField(state: GameState, player: number, moveType: MoveType, goals: Coord[]): number[] {
   const { width, height } = state;
   const dist = new Array<number>(width * height).fill(Infinity);
   const heap = new MinHeap();
@@ -173,13 +173,13 @@ export function distanceField(state: GameState, moveType: MoveType, goals: Coord
     if (p > dist[v]) continue;
     const c = fromIndex(width, v);
     // Walking from a neighbour into `v` costs the price of entering `v`.
-    const enter = moveCostAt(state, moveType, c.x, c.y);
+    const enter = moveCostFor(state, player, moveType, c.x, c.y);
     const stepCost = enter ?? 1;
     for (const d of DIRECTIONS) {
       const nx = c.x + d.x;
       const ny = c.y + d.y;
       if (!inBounds(width, height, nx, ny)) continue;
-      if (moveCostAt(state, moveType, nx, ny) === undefined) continue;
+      if (moveCostFor(state, player, moveType, nx, ny) === undefined) continue;
       const ni = toIndex(width, nx, ny);
       const total = p + stepCost;
       if (total < dist[ni]) {

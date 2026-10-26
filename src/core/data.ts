@@ -1,103 +1,98 @@
-// Loads the JSON data files into typed, validated lookup tables.
-// All rules code reads definitions through these helpers instead of importing JSON directly.
+// The active content: lookup tables for units, terrain, buildings, factions, biomes, maps
+// and rules. It starts as the base game and can be replaced at boot with base + mods via
+// setContent(). The exported records are refilled in place, so modules that imported them
+// always see the current content.
 
-import terrainJson from '../data/terrain.json';
-import unitsJson from '../data/units.json';
-import factionsJson from '../data/factions.json';
-import buildingsJson from '../data/buildings.json';
-import { MAP_LIST } from '../data/maps';
-import { MOVE_TYPES, type BuildingDef, type FactionDef, type MapDef, type TerrainDef, type UnitDef } from './types';
+import { BASE_PACK } from '../data';
+import { resolveContent, type Content, type ContentLayer } from './content';
+import { checkMap, type ContentIssue } from './validate';
+import type { BiomeDef, BuildingDef, FactionDef, MapDef, MoveTypeDef, RulesDef, TerrainDef, UnitDef } from './types';
 
 export class DataError extends Error {}
 
-function assert(cond: unknown, msg: string): asserts cond {
-  if (!cond) throw new DataError(msg);
-}
-
-function indexById<T extends { id: string }>(list: T[], kind: string): Record<string, T> {
-  const out: Record<string, T> = {};
-  for (const item of list) {
-    assert(typeof item.id === 'string' && item.id.length > 0, `${kind} without id`);
-    assert(!(item.id in out), `duplicate ${kind} id "${item.id}"`);
-    out[item.id] = item;
-  }
-  return out;
-}
-
-export const TERRAIN: Record<string, TerrainDef> = indexById(terrainJson as TerrainDef[], 'terrain');
-export const UNITS: Record<string, UnitDef> = indexById(unitsJson as UnitDef[], 'unit');
-export const FACTIONS: Record<string, FactionDef> = indexById(factionsJson as FactionDef[], 'faction');
-export const BUILDINGS: Record<string, BuildingDef> = indexById(buildingsJson as BuildingDef[], 'building');
-export const MAPS: Record<string, MapDef> = indexById(MAP_LIST, 'map');
-
-export const UNIT_IDS = Object.keys(UNITS);
-export const TERRAIN_IDS = Object.keys(TERRAIN);
+export const MOVE_TYPES: Record<string, MoveTypeDef> = {};
+export const TERRAIN: Record<string, TerrainDef> = {};
+export const UNITS: Record<string, UnitDef> = {};
+export const BUILDINGS: Record<string, BuildingDef> = {};
+export const FACTIONS: Record<string, FactionDef> = {};
+export const BIOMES: Record<string, BiomeDef> = {};
+export const MAPS: Record<string, MapDef> = {};
+export const RULES = {} as RulesDef;
 
 const TERRAIN_BY_CHAR: Record<string, string> = {};
-for (const t of Object.values(TERRAIN)) {
-  assert(t.char.length === 1, `terrain ${t.id} char must be one character`);
-  assert(!(t.char in TERRAIN_BY_CHAR), `terrain char "${t.char}" used twice`);
-  TERRAIN_BY_CHAR[t.char] = t.id;
-  for (const mt of Object.keys(t.moveCost)) {
-    assert((MOVE_TYPES as string[]).includes(mt), `terrain ${t.id}: unknown move type ${mt}`);
-  }
+
+let current: Content;
+let version = 0;
+let warnings: ContentIssue[] = [];
+
+function refill<T>(target: Record<string, T>, source: Record<string, T>): void {
+  for (const k of Object.keys(target)) delete target[k];
+  Object.assign(target, source);
 }
 
-for (const u of Object.values(UNITS)) {
-  assert((MOVE_TYPES as string[]).includes(u.moveType), `unit ${u.id}: unknown move type`);
-  assert(u.range[0] >= 1 && u.range[1] >= u.range[0], `unit ${u.id}: bad range`);
-  assert(u.maxHp > 0 && u.move > 0, `unit ${u.id}: bad stats`);
-  for (const target of Object.keys(u.bonusVs)) {
-    assert(target in UNITS, `unit ${u.id}: bonusVs unknown unit ${target}`);
-  }
+/** Replaces the active content. Caches keyed on contentVersion() are invalidated. */
+export function setContent(content: Content, contentWarnings: ContentIssue[] = []): void {
+  current = content;
+  version++;
+  warnings = contentWarnings;
+  refill(MOVE_TYPES, content.moveTypes);
+  refill(TERRAIN, content.terrain);
+  refill(UNITS, content.units);
+  refill(BUILDINGS, content.buildings);
+  refill(FACTIONS, content.factions);
+  refill(BIOMES, content.biomes);
+  refill(MAPS, content.maps);
+  refill(RULES as unknown as Record<string, unknown>, content.rules as unknown as Record<string, unknown>);
+  refill(TERRAIN_BY_CHAR, Object.fromEntries(Object.values(content.terrain).map((t) => [t.char, t.id])));
 }
 
-for (const b of Object.values(BUILDINGS)) {
-  for (const p of b.produces) assert(p in UNITS, `building ${b.id}: produces unknown unit ${p}`);
-  assert(b.capturePoints > 0, `building ${b.id}: capturePoints must be positive`);
+/** Resolves and activates the given layers (base first). Throws ContentError if invalid. */
+export function loadContent(layers: ContentLayer[]): ContentIssue[] {
+  const { content, warnings: w } = resolveContent(layers);
+  setContent(content, w);
+  return w;
 }
 
-export function getBuildingDef(id: string): BuildingDef {
-  const b = BUILDINGS[id];
-  if (!b) throw new DataError(`unknown building "${id}"`);
-  return b;
+/** The base game alone, as a single layer (mods are appended after it). */
+export const BASE_LAYER: ContentLayer = { source: 'base', pack: BASE_PACK };
+
+export function getContent(): Content {
+  return current;
 }
 
-export function getTerrain(id: string): TerrainDef {
-  const t = TERRAIN[id];
-  if (!t) throw new DataError(`unknown terrain "${id}"`);
-  return t;
+/** Increments whenever content changes; use it to key caches of derived data. */
+export function contentVersion(): number {
+  return version;
 }
 
-export function getUnitDef(id: string): UnitDef {
-  const u = UNITS[id];
-  if (!u) throw new DataError(`unknown unit "${id}"`);
-  return u;
+export function contentWarnings(): ContentIssue[] {
+  return warnings;
 }
 
-export function getFaction(id: string): FactionDef {
-  const f = FACTIONS[id];
-  if (!f) throw new DataError(`unknown faction "${id}"`);
-  return f;
+function lookup<T>(table: Record<string, T>, id: string, kind: string): T {
+  const v = table[id];
+  if (!v) throw new DataError(`unknown ${kind} "${id}"`);
+  return v;
 }
 
-export function getMap(id: string): MapDef {
-  const m = MAPS[id];
-  if (!m) throw new DataError(`unknown map "${id}"`);
-  return m;
-}
+export const getUnitDef = (id: string): UnitDef => lookup(UNITS, id, 'unit');
+export const getTerrain = (id: string): TerrainDef => lookup(TERRAIN, id, 'terrain');
+export const getBuildingDef = (id: string): BuildingDef => lookup(BUILDINGS, id, 'building');
+export const getFaction = (id: string): FactionDef => lookup(FACTIONS, id, 'faction');
+export const getMap = (id: string): MapDef => lookup(MAPS, id, 'map');
+export const getBiome = (id: string): BiomeDef => lookup(BIOMES, id, 'biome');
 
 /** Parses a map's ASCII rows into a row-major list of terrain ids. */
 export function parseMapTerrain(map: MapDef): { width: number; height: number; terrain: string[] } {
   const height = map.rows.length;
-  assert(height > 0, `map ${map.id}: no rows`);
+  if (height === 0) throw new DataError(`map ${map.id}: no rows`);
   const width = map.rows[0].length;
   const terrain: string[] = [];
   map.rows.forEach((row, y) => {
-    assert(row.length === width, `map ${map.id}: row ${y} has length ${row.length}, expected ${width}`);
+    if (row.length !== width) throw new DataError(`map ${map.id}: row ${y} has length ${row.length}, expected ${width}`);
     for (const ch of row) {
       const id = map.legend?.[ch] ?? TERRAIN_BY_CHAR[ch];
-      assert(id && id in TERRAIN, `map ${map.id}: unknown terrain char "${ch}" in row ${y}`);
+      if (!id || !(id in TERRAIN)) throw new DataError(`map ${map.id}: unknown terrain char "${ch}" in row ${y}`);
       terrain.push(id);
     }
   });
@@ -106,34 +101,13 @@ export function parseMapTerrain(map: MapDef): { width: number; height: number; t
 
 /** Throws a DataError describing the first problem found in a map definition. */
 export function validateMap(map: MapDef): void {
-  const { width, height, terrain } = parseMapTerrain(map);
-  assert(map.players.length >= 2, `map ${map.id}: needs at least two players`);
-  for (const p of map.players) assert(p.faction in FACTIONS, `map ${map.id}: unknown faction ${p.faction}`);
-  const seen = new Set<number>();
-  for (const u of map.units) {
-    assert(u.type in UNITS, `map ${map.id}: unknown unit type ${u.type}`);
-    assert(u.owner >= 0 && u.owner < map.players.length, `map ${map.id}: bad unit owner ${u.owner}`);
-    assert(u.x >= 0 && u.y >= 0 && u.x < width && u.y < height, `map ${map.id}: unit out of bounds`);
-    const idx = u.y * width + u.x;
-    assert(!seen.has(idx), `map ${map.id}: two units at ${u.x},${u.y}`);
-    seen.add(idx);
-    const cost = getTerrain(terrain[idx]).moveCost[getUnitDef(u.type).moveType];
-    assert(cost !== undefined, `map ${map.id}: ${u.type} placed on impassable ${terrain[idx]} at ${u.x},${u.y}`);
-  }
-  for (let p = 0; p < map.players.length; p++) {
-    assert(map.units.some((u) => u.owner === p), `map ${map.id}: player ${p} has no starting units`);
-  }
-  const bseen = new Set<number>();
-  for (const b of map.buildings ?? []) {
-    assert(b.type in BUILDINGS, `map ${map.id}: unknown building ${b.type}`);
-    assert(b.x >= 0 && b.y >= 0 && b.x < width && b.y < height, `map ${map.id}: building out of bounds`);
-    const idx = b.y * width + b.x;
-    assert(!bseen.has(idx), `map ${map.id}: two buildings at ${b.x},${b.y}`);
-    bseen.add(idx);
-    const t = getTerrain(terrain[idx]);
-    assert(t.moveCost.foot !== undefined && t.autotile !== 'water' && t.autotile !== 'bridge', `map ${map.id}: building on ${t.id} at ${b.x},${b.y}`);
-    assert(b.owner === null || (b.owner >= 0 && b.owner < map.players.length), `map ${map.id}: bad building owner`);
-  }
+  const problem = checkMap(map, current);
+  if (problem) throw new DataError(`map ${map.id}: ${problem}`);
 }
 
-for (const map of Object.values(MAPS)) validateMap(map);
+/** Terrain id for a map character (e.g. "f" -> "forest"). */
+export function terrainForChar(ch: string): string | undefined {
+  return TERRAIN_BY_CHAR[ch];
+}
+
+loadContent([BASE_LAYER]);

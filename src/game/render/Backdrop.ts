@@ -1,7 +1,8 @@
 // Menu backgrounds (a live battlefield slowly panning under a dither) and map thumbnails.
 
 import Phaser from 'phaser';
-import { getBuildingDef, getMap, parseMapTerrain } from '../../core/data';
+import { getBuildingDef, getMap, getTerrain, parseMapTerrain } from '../../core/data';
+import { statsOf } from '../../core/stats';
 import { createGame } from '../../core/state';
 import { VIEW_H, VIEW_W } from '../config';
 import { bakeDither } from '../gfx/bake';
@@ -18,7 +19,7 @@ export function addBackdrop(scene: Phaser.Scene, mapId: string): void {
   const view = new MapView(scene, state);
   const teamOf = (o: number) => state.players[o].faction;
   new BuildingLayer(scene, teamOf).sync(state);
-  new UnitLayer(scene, teamOf).sync(state);
+  new UnitLayer(scene, teamOf, (u) => statsOf(state, u).maxHp).sync(state);
   bakeDither(scene, 'dither-shade', PALETTE_RGB[1]);
   const shade = scene.add.tileSprite(0, 0, VIEW_W, VIEW_H, 'dither-shade', 'a').setOrigin(0, 0).setScrollFactor(0).setDepth(500);
   shade.setAlpha(1);
@@ -46,17 +47,6 @@ export function addBackdrop(scene: Phaser.Scene, mapId: string): void {
   });
 }
 
-const TERRAIN_COLORS: Record<string, number> = {
-  plains: 10,
-  road: 6,
-  bridge: 4,
-  forest: 12,
-  hills: 30,
-  mountain: 23,
-  ford: 19,
-  water: 17,
-};
-
 /** A small map thumbnail texture (`px` pixels per tile); returns its texture key. */
 export function minimapTexture(scene: Phaser.Scene, mapId: string, px = 3): string {
   const key = `minimap-${mapId}-${px}`;
@@ -72,7 +62,7 @@ export function minimapTexture(scene: Phaser.Scene, mapId: string, px = 3): stri
     ctx.fillRect(x * px + inset, y * px + inset, px - inset * 2, px - inset * 2);
   };
   for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) fill(x, y, TERRAIN_COLORS[terrain[y * width + x]] ?? 10);
+    for (let x = 0; x < width; x++) fill(x, y, getTerrain(terrain[y * width + x]).minimap ?? 10);
   }
   for (const b of map.buildings ?? []) {
     const ramp = b.owner === null ? TEAM_RAMPS.neutral : TEAM_RAMPS[map.players[b.owner].faction];

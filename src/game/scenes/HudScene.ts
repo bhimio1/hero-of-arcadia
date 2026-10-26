@@ -2,8 +2,8 @@
 // dialogs and banners. It runs as its own scene so its camera never scrolls with the map.
 
 import Phaser from 'phaser';
-import { getBuildingDef, getUnitDef } from '../../core/data';
-import type { Building, TerrainDef, Unit } from '../../core/types';
+import { getBuildingDef } from '../../core/data';
+import type { Building, TerrainDef, Unit, UnitDef } from '../../core/types';
 import { FONT_SIZE, VIEW_H, VIEW_W } from '../config';
 import { sfx } from '../audio/sfx';
 import { pal, TEAM_RAMPS, UI } from '../gfx/palette';
@@ -29,6 +29,8 @@ export interface PreviewSide {
 export interface InfoData {
   terrain: TerrainDef | null;
   unit: Unit | null;
+  /** The unit's effective stats (with its faction's perks). */
+  stats?: UnitDef;
   faction?: string;
   building?: Building | null;
   buildingFaction?: string;
@@ -147,7 +149,7 @@ export class HudScene extends Phaser.Scene {
     const lines: { s: string; c: number }[] = [];
     if (info?.unit) {
       const u = info.unit;
-      const def = getUnitDef(u.type);
+      const def = info.stats!;
       const color = info.faction ? TEAM_RAMPS[info.faction][0] : UI.text;
       lines.push({ s: `${def.name.toUpperCase()}`, c: color });
       lines.push({ s: `HP ${Math.ceil(u.hp)}/${def.maxHp}  MOV ${def.move}`, c: UI.text });

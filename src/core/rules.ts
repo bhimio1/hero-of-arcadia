@@ -1,13 +1,14 @@
 // The single entry point for changing game state. Both the UI and the AI go through
 // applyAction, so neither can bypass the rules. applyAction never mutates its input.
 
-import { baseDamage, canCounter, inAttackRange, LUCK_MAX } from './combat';
-import { getBuildingDef, getUnitDef } from './data';
+import { baseDamage, canCounter, inAttackRange, luckMax } from './combat';
+import { getBuildingDef } from './data';
 import { visibilityMask } from './fog';
 import { sameCoord, toIndex } from './grid';
 import { pathCost } from './pathfinding';
 import { Rng } from './rng';
-import { buildingAt, cloneState, getBuilding, getUnit, incomeOf, scoreOf, unitAt } from './state';
+import { buildingAt, cloneState, getBuilding, getUnit, scoreOf, unitAt } from './state';
+import { captureStrength, healAmount, incomeOf, rosterFor, statsOf } from './stats';
 import type { Action, ActionResult, Coord, GameEvent, GameState, Unit } from './types';
 
 class RuleError extends Error {}
@@ -71,8 +72,8 @@ function doMove(state: GameState, unitId: number, path: Coord[], events: GameEve
   if (unit.moved) fail('unit has already moved');
   if (!Array.isArray(path) || path.length < 2) fail('path too short');
   if (!sameCoord(path[0], unit)) fail('path must start at the unit');
-  const def = getUnitDef(unit.type);
-  const cost = pathCost(state, def.moveType, path);
+  const def = statsOf(state, unit);
+  const cost = pathCost(state, unit.owner, def.moveType, path);
   if (cost === null) fail('path is not walkable');
   if (cost > def.move) fail('path is too long');
   // Enemies the mover can see block the path outright; hidden ones spring an ambush.
@@ -114,7 +115,7 @@ function doMove(state: GameState, unitId: number, path: Coord[], events: GameEve
 
 function strike(state: GameState, attacker: Unit, defender: Unit, counter: boolean, rng: Rng, events: GameEvent[]): void {
   let damage = baseDamage(state, attacker, attacker.hp, defender);
-  if (state.options.luck) damage += rng.int(0, LUCK_MAX);
+  if (state.options.luck) damage += rng.int(0, luckMax());
   defender.hp = Math.max(0, defender.hp - damage);
   events.push({ type: 'attacked', attackerId: attacker.id, defenderId: defender.id, damage, counter, hpAfter: defender.hp });
   if (defender.hp <= 0) {
@@ -128,35 +129,31 @@ function strike(state: GameState, attacker: Unit, defender: Unit, counter: boole
 
 function doAttack(state: GameState, unitId: number, targetId: number, events: GameEvent[]): void {
   const unit = requireOwnUnit(state, unitId);
-  const def = getUnitDef(unit.type);
+  const def = statsOf(state, unit);
   if (unit.moved && !def.moveAndFire) fail(`${def.name} cannot move and attack in the same turn`);
   const target = getUnit(state, targetId);
   if (!target) fail(`no unit ${targetId}`);
   if (target.owner === unit.owner) fail('cannot attack your own unit');
-  if (!inAttackRange(unit, unit, target)) fail('target out of range');
+  if (!inAttackRange(state, unit, unit, target)) fail('target out of range');
   if (state.options.fog && !visibilityMask(state, unit.owner)[toIndex(state.width, target.x, target.y)]) fail('target is hidden');
   const rng = new Rng(state.rng);
   strike(state, unit, target, false, rng, events);
-  if (target.hp > 0 && canCounter(target, unit)) strike(state, target, unit, true, rng, events);
+  if (target.hp > 0 && canCounter(state, target, unit)) strike(state, target, unit, true, rng, events);
   state.rng = rng.state;
   unit.moved = true;
   unit.acted = true;
 }
 
-/** Capture strength: healthy units capture twice as fast as badly wounded ones. */
-export function captureStrength(unit: Unit): number {
-  return unit.hp >= Math.ceil(getUnitDef(unit.type).maxHp / 2) ? 2 : 1;
-}
-
 function doCapture(state: GameState, unitId: number, events: GameEvent[]): void {
   const unit = requireOwnUnit(state, unitId);
-  if (!getUnitDef(unit.type).canCapture) fail(`${getUnitDef(unit.type).name} cannot capture`);
+  const stats = statsOf(state, unit);
+  if (!stats.canCapture) fail(`${stats.name} cannot capture`);
   const b = buildingAt(state, unit.x, unit.y);
   if (!b) fail('there is nothing to capture here');
   if (b.owner === unit.owner) fail('you already own this building');
   const def = getBuildingDef(b.type);
   if (!b.capture || b.capture.unitId !== unit.id) b.capture = { unitId: unit.id, points: 0 };
-  b.capture.points += captureStrength(unit);
+  b.capture.points += captureStrength(state, unit);
   unit.moved = true;
   unit.acted = true;
   if (b.capture.points < def.capturePoints) {
@@ -176,9 +173,9 @@ function doBuild(state: GameState, buildingId: number, unitType: string, events:
   if (!b) fail(`no building ${buildingId}`);
   if (b.owner !== state.currentPlayer) fail('not your building');
   const def = getBuildingDef(b.type);
-  if (!def.produces.includes(unitType)) fail(`${def.name} cannot build ${unitType}`);
+  if (!rosterFor(state, state.currentPlayer, b.type).includes(unitType)) fail(`${def.name} cannot build ${unitType}`);
   if (unitAt(state, b.x, b.y)) fail('the building is occupied');
-  const udef = getUnitDef(unitType);
+  const udef = statsOf(state, { owner: state.currentPlayer, type: unitType });
   const player = state.players[state.currentPlayer];
   if (player.gold < udef.cost) fail('not enough gold');
   player.gold -= udef.cost;
@@ -259,7 +256,7 @@ function eliminate(state: GameState, player: number, events: GameEvent[]): void 
 
 /** Whether a player owns a building that can still raise units. */
 function canProduce(state: GameState, player: number): boolean {
-  return state.buildings.some((b) => b.owner === player && getBuildingDef(b.type).produces.length > 0);
+  return state.buildings.some((b) => b.owner === player && rosterFor(state, player, b.type).length > 0);
 }
 
 /**
@@ -297,10 +294,8 @@ export function startTurn(state: GameState, events: GameEvent[]): void {
   events.push({ type: 'turnStarted', player, round: state.round, income });
   for (const u of state.units) {
     if (u.owner !== player) continue;
-    const b = buildingAt(state, u.x, u.y);
-    if (!b || b.owner !== player) continue;
-    const max = getUnitDef(u.type).maxHp;
-    const amount = Math.min(getBuildingDef(b.type).heal, max - u.hp);
+    const max = statsOf(state, u).maxHp;
+    const amount = Math.min(healAmount(state, u), max - u.hp);
     if (amount > 0) {
       u.hp += amount;
       events.push({ type: 'healed', unitId: u.id, amount });
