@@ -2,6 +2,7 @@
 // scene only turns input into core actions and plays back the resulting events.
 
 import Phaser from 'phaser';
+import { createAi, type AiController } from '../../core/ai';
 import { previewAttack, targetsFrom, terrainDefense, threatTiles } from '../../core/combat';
 import { getFaction, getUnitDef } from '../../core/data';
 import { canUndo, dispatch, newMatch, undo, type Match } from '../../core/match';
@@ -50,6 +51,9 @@ export class BattleScene extends Phaser.Scene {
   private drag: { startX: number; startY: number; scrollX: number; scrollY: number; active: boolean } | null = null;
   private inspected: number | null = null;
   private previewTarget: Unit | null = null;
+  private ais = new Map<number, AiController>();
+  /** Delay between AI actions in ms (scaled by the animation speed setting). */
+  private aiPause = 220;
 
   constructor() {
     super('Battle');
@@ -58,6 +62,10 @@ export class BattleScene extends Phaser.Scene {
   init(data: BattleInit): void {
     this.initData = data;
     this.match = newMatch(data.setup);
+    this.ais.clear();
+    this.match.state.players.forEach((p, i) => {
+      if (p.controller === 'ai') this.ais.set(i, createAi());
+    });
     this.mode = 'idle';
     this.selected = null;
     this.inspected = null;
@@ -424,6 +432,10 @@ export class BattleScene extends Phaser.Scene {
     if (this.previewTarget?.id !== target.id) sfx.play('cursor');
     this.previewTarget = target;
     this.overlays.moveCursor(target);
+    this.showPreview(unit, target);
+  }
+
+  private showPreview(unit: Unit, target: Unit): void {
     const p = previewAttack(this.state, unit, target);
     const side = (u: Unit, hpAfter: [number, number], deals: [number, number] | null) => ({
       name: getUnitDef(u.type).name,
@@ -534,7 +546,65 @@ export class BattleScene extends Phaser.Scene {
     if (first) void this.ensureVisible(first);
     sfx.play('turnStart');
     await this.hud.banner(`DAY ${this.state.round}`, p.faction, getFaction(p.faction).name.toUpperCase());
+    const ai = this.ais.get(this.state.currentPlayer);
+    if (ai) {
+      // run the AI after this event chain has finished animating
+      this.time.delayedCall(0, () => void this.runAiTurn(ai));
+      return;
+    }
     this.mode = 'idle';
+  }
+
+  /** Plays the AI's turn action by action, animating each one. */
+  private async runAiTurn(ai: AiController): Promise<void> {
+    const player = this.state.currentPlayer;
+    this.mode = 'busy';
+    this.hud.setButtonsEnabled(false);
+    for (let step = 0; step < 500; step++) {
+      if (this.state.gameOver || this.state.currentPlayer !== player || !this.scene.isActive()) return;
+      let action: Action;
+      try {
+        action = ai.nextAction(this.state);
+      } catch (e) {
+        console.error('AI failed', e);
+        action = { type: 'endTurn' };
+      }
+      if (action.type !== 'endTurn') await this.showAiIntent(action);
+      if (action.type === 'endTurn') sfx.play('endTurn');
+      const ok = await this.perform(action);
+      if (!ok) {
+        // never let a confused AI hang the game
+        const fallback: Action = 'unitId' in action ? { type: 'wait', unitId: action.unitId } : { type: 'endTurn' };
+        if (!(await this.perform(fallback))) await this.perform({ type: 'endTurn' });
+      }
+      if (action.type === 'endTurn') return;
+      await wait(this, this.aiPause);
+    }
+    await this.perform({ type: 'endTurn' });
+  }
+
+  /** Lets the player see what the AI is about to do. */
+  private async showAiIntent(action: Action): Promise<void> {
+    if (!('unitId' in action)) return;
+    const unit = getUnit(this.state, action.unitId);
+    if (!unit) return;
+    await this.ensureVisible(unit);
+    this.overlays.moveCursor(unit);
+    if (action.type === 'move') {
+      const end = action.path[action.path.length - 1];
+      this.overlays.showPath(action.path);
+      await wait(this, this.aiPause);
+      this.overlays.showPath([]);
+      await this.ensureVisible(end);
+    } else if (action.type === 'attack') {
+      const target = getUnit(this.state, action.targetId);
+      if (!target) return;
+      this.overlays.show('target', [{ x: target.x, y: target.y }]);
+      this.showPreview(unit, target);
+      await wait(this, this.aiPause * 3);
+      this.hud.hidePreview();
+      this.overlays.clear('target');
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -550,7 +620,7 @@ export class BattleScene extends Phaser.Scene {
     this.hud.setButtonsEnabled(false);
     for (const ev of res.events) await this.animate(ev);
     this.units.sync(this.state);
-    this.hud.setButtonsEnabled(true);
+    this.hud.setButtonsEnabled(!this.ais.has(this.state.currentPlayer));
     this.refreshHud();
     return true;
   }

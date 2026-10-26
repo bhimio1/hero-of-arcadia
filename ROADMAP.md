@@ -21,9 +21,16 @@
   targets can be cycled with arrows/Tab and confirmed with Enter, and a move can be taken
   back with Esc or Ctrl+Z until the unit acts.
 
+- **M4 — AI opponent.** `AiController` interface (one action at a time, re-asked after
+  every action) with a greedy implementation: scores every unit's attacks (damage value,
+  kill bonus, counter cost) and moves (progress toward attack positions, cover, threat of
+  enemy strikes next turn; ranged units hang back), growing bolder as games drag on.
+  AI turns are animated with intent previews. Tests cover target choice, advancing,
+  move-and-fire rules, and AI-vs-AI games that must finish with only legal actions, plus
+  a random-play fuzz test for state invariants.
+
 ## Next
 
-- M4 — Simple AI opponent.
 - M5 — Economy: buildings, capture, income, production.
 - M6 — Save/load, main menu, settings.
 - M7 — Fog of war, more units, more maps.
