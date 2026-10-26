@@ -206,6 +206,7 @@ export type Action =
 
 export type GameEvent =
   | { type: 'moved'; unitId: number; path: Coord[] }
+  | { type: 'ambushed'; unitId: number; by: number; x: number; y: number }
   | { type: 'attacked'; attackerId: number; defenderId: number; damage: number; counter: boolean; hpAfter: number }
   | { type: 'died'; unitId: number; owner: number; x: number; y: number }
   | { type: 'waited'; unitId: number }

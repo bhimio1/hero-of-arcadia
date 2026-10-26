@@ -5,16 +5,18 @@ import Phaser from 'phaser';
 import { createAi, type AiController } from '../../core/ai';
 import { previewAttack, targetsFrom, terrainDefense, threatTiles } from '../../core/combat';
 import { getBuildingDef, getFaction, getUnitDef } from '../../core/data';
+import { playerView, visibilityMask } from '../../core/fog';
 import { canUndo, dispatch, newMatch, undo, type Match } from '../../core/match';
 import { makeSave, restoreMatch, type SaveData } from '../../core/save';
 import { computeReach, destinations, pathTo, type Reach } from '../../core/pathfinding';
 import { buildingAt, getBuilding, getUnit, terrainAt, unitAt, type GameSetup } from '../../core/state';
-import type { Action, Building, Coord, GameEvent, Unit } from '../../core/types';
+import type { Action, Building, Coord, GameEvent, GameState, Unit } from '../../core/types';
 import { TILE, VIEW_H, VIEW_W } from '../config';
 import { sfx } from '../audio/sfx';
 import { bakeDither } from '../gfx/bake';
 import { pal, PALETTE_RGB, UI } from '../gfx/palette';
 import { BuildingLayer } from '../render/BuildingLayer';
+import { FogLayer } from '../render/FogLayer';
 import { MapView } from '../render/MapView';
 import { Overlays } from '../render/Overlays';
 import { tween, UnitLayer, wait } from '../render/UnitLayer';
@@ -44,7 +46,11 @@ export class BattleScene extends Phaser.Scene {
   private units!: UnitLayer;
   private buildings!: BuildingLayer;
   private overlays!: Overlays;
+  private fog!: FogLayer;
   private hud!: HudScene;
+  /** The last human player whose eyes the screen showed. */
+  private lastViewer: number | null = null;
+  private viewCache: { state: GameState; viewer: number | null; view: GameState; mask: boolean[] | null } | null = null;
   private mode: Mode = 'idle';
   private selected: Selection | null = null;
   private hover: Coord = { x: 0, y: 0 };
@@ -72,6 +78,9 @@ export class BattleScene extends Phaser.Scene {
     this.mode = 'idle';
     this.selected = null;
     this.inspected = null;
+    this.viewCache = null;
+    const s = this.match.state;
+    this.lastViewer = s.players[s.currentPlayer].controller === 'human' ? s.currentPlayer : null;
   }
 
   create(): void {
@@ -83,8 +92,8 @@ export class BattleScene extends Phaser.Scene {
     this.buildings = new BuildingLayer(this, teamOf);
     this.units = new UnitLayer(this, teamOf);
     this.overlays = new Overlays(this);
-    this.buildings.sync(state);
-    this.units.sync(state);
+    this.fog = new FogLayer(this, state.width, state.height);
+    this.syncWorld();
 
     this.scene.launch('Hud', { callbacks: { onEndTurn: () => this.requestEndTurn(), onMenu: () => this.openPauseMenu() } });
     this.hud = this.scene.get('Hud') as HudScene;
@@ -333,13 +342,59 @@ export class BattleScene extends Phaser.Scene {
     return this.match.state;
   }
 
+  /** The human whose eyes the screen shows, or null when spectating an all-AI battle. */
+  private get viewer(): number | null {
+    const s = this.state;
+    if (s.players[s.currentPlayer].controller === 'human') return s.currentPlayer;
+    if (this.lastViewer !== null) return this.lastViewer;
+    const first = s.players.findIndex((p) => p.controller === 'human');
+    return first >= 0 ? first : null;
+  }
+
+  private viewInfo(): { view: GameState; mask: boolean[] | null } {
+    const state = this.state;
+    const viewer = this.viewer;
+    const c = this.viewCache;
+    if (c && c.state === state && c.viewer === viewer) return c;
+    const fogged = state.options.fog && viewer !== null;
+    const next = {
+      state,
+      viewer,
+      view: fogged ? playerView(state, viewer) : state,
+      mask: fogged ? visibilityMask(state, viewer) : null,
+    };
+    this.viewCache = next;
+    return next;
+  }
+
+  /** The battle as the viewer knows it: enemies in the fog are left out. */
+  private get view(): GameState {
+    return this.viewInfo().view;
+  }
+
+  private seen(c: Coord): boolean {
+    const mask = this.viewInfo().mask;
+    return !mask || mask[c.y * this.state.width + c.x];
+  }
+
+  private canViewerSee(u: Unit): boolean {
+    return u.owner === this.viewer || this.seen(u);
+  }
+
+  /** Redraws units, buildings and fog for the current state and viewer. */
+  private syncWorld(): void {
+    this.units.sync(this.state, (u) => this.canViewerSee(u));
+    this.buildings.sync(this.view);
+    this.fog.update(this.viewInfo().mask);
+  }
+
   private isReady(u: Unit | undefined): boolean {
     return !!u && u.owner === this.state.currentPlayer && !u.acted && !u.moved;
   }
 
   private onTileClick(t: Coord): void {
     if (!this.inside(t)) return;
-    const unit = unitAt(this.state, t.x, t.y);
+    const unit = unitAt(this.view, t.x, t.y);
     switch (this.mode) {
       case 'idle': {
         const b = buildingAt(this.state, t.x, t.y);
@@ -389,9 +444,9 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     this.inspected = unit.id;
-    const reach = computeReach(this.state, unit);
-    const dests = destinations(this.state, unit, reach);
-    this.overlays.show('danger', threatTiles(this.state, unit, dests));
+    const reach = computeReach(this.view, unit);
+    const dests = destinations(this.view, unit, reach);
+    this.overlays.show('danger', threatTiles(this.view, unit, dests));
     sfx.play('select');
   }
 
@@ -403,13 +458,13 @@ export class BattleScene extends Phaser.Scene {
 
   private select(unit: Unit): void {
     this.clearInspect();
-    const reach = computeReach(this.state, unit);
-    const dests = destinations(this.state, unit, reach);
+    const reach = computeReach(this.view, unit);
+    const dests = destinations(this.view, unit, reach);
     this.selected = { unit, reach, dests };
     this.mode = 'selected';
     this.overlays.show('move', dests);
     const destSet = new Set(dests.map((d) => d.y * this.state.width + d.x));
-    this.overlays.show('attack', threatTiles(this.state, unit, dests).filter((c) => !destSet.has(c.y * this.state.width + c.x)));
+    this.overlays.show('attack', threatTiles(this.view, unit, dests).filter((c) => !destSet.has(c.y * this.state.width + c.x)));
     sfx.play('select');
   }
 
@@ -466,8 +521,11 @@ export class BattleScene extends Phaser.Scene {
     this.mode = 'busy';
     await this.perform({ type: 'move', unitId: sel.unit.id, path });
     const moved = getUnit(this.state, sel.unit.id);
-    if (!moved) {
+    if (!moved || moved.acted) {
+      // ambushed: the unit's turn is over
+      this.selected = null;
       this.mode = 'idle';
+      this.refreshInfo();
       return;
     }
     this.selected = { ...sel, unit: moved };
@@ -481,7 +539,7 @@ export class BattleScene extends Phaser.Scene {
     this.overlays.clear();
     this.mode = 'menu';
     const def = getUnitDef(unit.type);
-    const targets = targetsFrom(this.state, unit, unit);
+    const targets = targetsFrom(this.view, unit, unit);
     const canFire = !unit.moved || def.moveAndFire;
     const items: MenuItem[] = [];
     if (targets.length > 0 && canFire) {
@@ -508,7 +566,7 @@ export class BattleScene extends Phaser.Scene {
 
   private currentTargets(): Unit[] {
     const unit = this.selected?.unit;
-    return unit ? targetsFrom(this.state, unit, unit) : [];
+    return unit ? targetsFrom(this.view, unit, unit) : [];
   }
 
   private startTargeting(): void {
@@ -517,7 +575,7 @@ export class BattleScene extends Phaser.Scene {
     this.mode = 'targeting';
     sfx.play('confirm');
     const targets = this.currentTargets();
-    this.overlays.show('attack', threatTiles(this.state, unit, [unit]));
+    this.overlays.show('attack', threatTiles(this.view, unit, [unit]));
     this.overlays.show('target', targets.map((u) => ({ x: u.x, y: u.y })));
     const hovered = targets.find((u) => u.x === this.hover.x && u.y === this.hover.y);
     this.setPreviewTarget(hovered ?? targets[0]);
@@ -561,7 +619,7 @@ export class BattleScene extends Phaser.Scene {
     const id = this.selected.unit.id;
     if (!undo(this.match)) return;
     this.hud.closeMenu();
-    this.units.sync(this.state);
+    this.syncWorld();
     const unit = getUnit(this.state, id)!;
     sfx.play('cancel');
     this.select(unit);
@@ -693,8 +751,15 @@ export class BattleScene extends Phaser.Scene {
   private async beginTurn(): Promise<void> {
     if (this.state.gameOver) return;
     this.mode = 'busy';
-    this.refreshHud();
     const p = this.state.players[this.state.currentPlayer];
+    const humans = this.state.players.filter((pl) => pl.controller === 'human').length;
+    if (p.controller === 'human') {
+      const handover = humans > 1 && this.state.options.fog && this.lastViewer !== this.state.currentPlayer;
+      if (handover) await this.hud.curtain(getFaction(p.faction).name.toUpperCase(), p.faction);
+      this.lastViewer = this.state.currentPlayer;
+    }
+    this.syncWorld();
+    this.refreshHud();
     const first = this.firstReadyUnit();
     if (first) void this.ensureVisible(first);
     sfx.play('turnStart');
@@ -720,7 +785,7 @@ export class BattleScene extends Phaser.Scene {
       if (this.state.gameOver || this.state.currentPlayer !== player || !this.scene.isActive()) return;
       let action: Action;
       try {
-        action = ai.nextAction(this.state);
+        action = ai.nextAction(playerView(this.state, player));
       } catch (e) {
         console.error('AI failed', e);
         action = { type: 'endTurn' };
@@ -743,18 +808,20 @@ export class BattleScene extends Phaser.Scene {
   private async showAiIntent(action: Action): Promise<void> {
     if (!('unitId' in action)) return;
     const unit = getUnit(this.state, action.unitId);
-    if (!unit) return;
+    // never pan to, or hint at, units hidden in the fog
+    if (!unit || !this.canViewerSee(unit)) return;
     await this.ensureVisible(unit);
     this.overlays.moveCursor(unit);
     if (action.type === 'move') {
+      const shown = action.path.filter((c) => this.seen(c));
       const end = action.path[action.path.length - 1];
-      this.overlays.showPath(action.path);
+      this.overlays.showPath(shown.length === action.path.length ? action.path : []);
       await wait(this, this.aiPause);
       this.overlays.showPath([]);
-      await this.ensureVisible(end);
+      if (this.seen(end)) await this.ensureVisible(end);
     } else if (action.type === 'attack') {
       const target = getUnit(this.state, action.targetId);
-      if (!target) return;
+      if (!target || !this.canViewerSee(target)) return;
       this.overlays.show('target', [{ x: target.x, y: target.y }]);
       this.showPreview(unit, target);
       await wait(this, this.aiPause * 3);
@@ -777,8 +844,7 @@ export class BattleScene extends Phaser.Scene {
     this.hud.setButtonsEnabled(false);
     const actor = actingPlayer;
     for (const ev of res.events) await this.animate(ev);
-    this.units.sync(this.state);
-    this.buildings.sync(this.state);
+    this.syncWorld();
     // keep "Continue" current; never save between a move and the order that completes it
     if (!this.ais.has(actor) && action.type !== 'move' && action.type !== 'endTurn' && !this.state.gameOver) this.autosave();
     this.hud.setButtonsEnabled(!this.ais.has(this.state.currentPlayer));
@@ -788,15 +854,33 @@ export class BattleScene extends Phaser.Scene {
 
   private async animate(ev: GameEvent): Promise<void> {
     switch (ev.type) {
-      case 'moved':
-        await this.units.moveAlong(ev.unitId, ev.path, () => sfx.play('step'));
+      case 'moved': {
+        const unit = getUnit(this.state, ev.unitId);
+        if (!unit) break;
+        const own = unit.owner === this.viewer;
+        const visibleAt = (c: Coord) => own || this.seen(c);
+        if (!ev.path.some(visibleAt)) break; // moved entirely inside the fog
+        this.units.ensure(unit, ev.path[0]);
+        await this.units.moveAlong(ev.unitId, ev.path, () => sfx.play('step'), visibleAt);
         break;
+      }
+      case 'ambushed': {
+        const unit = getUnit(this.state, ev.unitId);
+        if (unit && this.canViewerSee(unit)) {
+          sfx.play('error');
+          await this.popup(unit, '!AMBUSH!', UI.danger);
+        }
+        break;
+      }
       case 'attacked': {
         const attacker = this.unitPos(ev.attackerId);
         const defender = this.unitPos(ev.defenderId);
         if (attacker && defender) {
           sfx.play('attack');
           await this.units.lunge(ev.attackerId, defender);
+        }
+        if (defender) {
+          // the defender may be visible even when the attacker shoots from the fog
           sfx.play('hit');
           void this.popup(defender, `-${ev.damage}`, ev.counter ? UI.danger : UI.bad);
           await this.units.hit(ev.defenderId);
@@ -809,39 +893,40 @@ export class BattleScene extends Phaser.Scene {
         break;
       case 'captureProgress': {
         const b = getBuilding(this.state, ev.buildingId);
-        if (b) {
+        if (b && this.seen(b)) {
           sfx.play('select');
-          this.buildings.sync(this.state);
+          this.buildings.sync(this.view);
           await this.popup(b, `${ev.points}/${ev.required}`, UI.highlight);
         }
         break;
       }
       case 'captured': {
         const b = getBuilding(this.state, ev.buildingId);
-        if (b) {
+        this.buildings.sync(this.view);
+        if (b && this.seen(b)) {
           sfx.play('capture');
-          this.buildings.sync(this.state);
           this.buildings.flash(b.id);
           await this.popup(b, 'TAKEN!', UI.highlight);
         }
         break;
       }
       case 'built': {
-        sfx.play('build');
-        this.units.sync(this.state);
         const u = getUnit(this.state, ev.unitId);
-        if (u) void this.popup(u, 'NEW', UI.good);
-        await wait(this, 250);
+        if (u && this.canViewerSee(u)) {
+          sfx.play('build');
+          this.syncWorld();
+          void this.popup(u, 'NEW', UI.good);
+          await wait(this, 250);
+        }
         break;
       }
       case 'healed': {
         const u = getUnit(this.state, ev.unitId);
-        if (u) void this.popup(u, `+${ev.amount}`, UI.good);
+        if (u && this.canViewerSee(u)) void this.popup(u, `+${ev.amount}`, UI.good);
         break;
       }
       case 'eliminated':
-        this.units.sync(this.state);
-        this.buildings.sync(this.state);
+        this.syncWorld();
         break;
       case 'turnStarted':
         this.lastIncome = ev.income;
@@ -913,8 +998,8 @@ export class BattleScene extends Phaser.Scene {
 
   private refreshInfo(): void {
     if (!this.hud?.sys.isActive() || !this.inside(this.hover) || this.buildMenuOpen) return;
-    const unit = unitAt(this.state, this.hover.x, this.hover.y) ?? null;
-    const b = buildingAt(this.state, this.hover.x, this.hover.y) ?? null;
+    const unit = unitAt(this.view, this.hover.x, this.hover.y) ?? null;
+    const b = buildingAt(this.view, this.hover.x, this.hover.y) ?? null;
     this.hud.setInfo({
       terrain: terrainAt(this.state, this.hover.x, this.hover.y),
       unit,

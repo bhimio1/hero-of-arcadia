@@ -46,9 +46,18 @@
   in localStorage and apply immediately. Tests: save round-trip, replay determinism,
   tamper detection, corrupt/foreign/old saves rejected, slot storage.
 
+- **M7 — Fog, new units, maps, hot-seat.** Fog of war: vision per unit (+1 on hills, +2 on
+  mountains), forests hide units from anyone not adjacent, owned buildings see their own
+  tile. The AI only ever receives its `playerView`, so it cannot see through fog. Moving
+  into a hidden enemy springs an ambush (the move stops short and the unit's turn ends), a
+  move that reveals enemies can't be undone, and hidden units can't be targeted. Three new
+  units (Scout: fast, long sight; Shieldbearer: heavy, arrow-proof capturer; Battlemage:
+  1–2 range firepower) and three new maps: *Highland Pass* (fog, mountain passes),
+  *Wildwood* (fog, dense forest), *Four Crowns* (four-army free-for-all). Hot-seat for up
+  to four players with a handover screen between human turns when fog is on.
+
 ## Next
 
-- M7 — Fog of war, more units, more maps.
 - M8 — CI, GitHub Pages deploy, Tauri desktop builds.
 
 ## Later

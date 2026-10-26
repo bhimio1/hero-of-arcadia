@@ -1,0 +1,64 @@
+{
+  "id": "shieldbearer",
+  "fps": 2,
+  "frames": {
+    "idle": [
+      [
+        "................",
+        "....kkkk........",
+        "...kgggGk.......",
+        "..kgwggGGk......",
+        "..kGGGGGGk......",
+        "..kssssSSk......",
+        "..ksssskSk......",
+        "...kssskkkkkk...",
+        "..k111kgggggGk..",
+        ".k1121kg2222Gk..",
+        ".k1221kg2ww2Gk..",
+        ".k1221kg2222Gk..",
+        "..kbbbkgggggGk..",
+        "..k3k.kkGGGGkk..",
+        "..kbk...kkkk....",
+        ".kkkk..........."
+      ],
+      [
+        "................",
+        "................",
+        "....kkkk........",
+        "...kgggGk.......",
+        "..kgwggGGk......",
+        "..kGGGGGGk......",
+        "..kssssSSk......",
+        "..ksssskSk......",
+        "...kssskkkkkk...",
+        "..k111kgggggGk..",
+        ".k1121kg2222Gk..",
+        ".k1221kg2ww2Gk..",
+        ".k1221kg2222Gk..",
+        "..k3k.kkGGGGkk..",
+        "..kbk...kkkk....",
+        ".kkkk..........."
+      ]
+    ],
+    "attack": [
+      [
+        "................",
+        ".....kkkk.......",
+        "....kgggGk......",
+        "...kgwggGGk.....",
+        "...kGGGGGGk.....",
+        "...kssssSSk.....",
+        "...ksssskSk.....",
+        "....kssskkkkkk..",
+        "...k111kgggggGk.",
+        "..k1121kg2222Gkw",
+        "..k1221kg2ww2Gk.",
+        "..k1221kg2222Gk.",
+        "...kbbbkgggggGk.",
+        "...k3k.kkGGGGkk.",
+        "..kbk....kkkk...",
+        ".kkkk..........."
+      ]
+    ]
+  }
+}

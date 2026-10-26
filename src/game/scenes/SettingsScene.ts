@@ -25,7 +25,7 @@ export class SettingsScene extends Phaser.Scene {
   create(data: { from: 'Menu' | 'Battle' }): void {
     this.from = data.from;
     if (data.from === 'Menu') {
-      addBackdrop(this, 'first-ford');
+      addBackdrop(this, 'wildwood');
     } else {
       bakeDither(this, 'dither-shade', PALETTE_RGB[1]);
       this.add.tileSprite(0, 0, VIEW_W, VIEW_H, 'dither-shade', 'a').setOrigin(0, 0);

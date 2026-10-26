@@ -13,5 +13,8 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     environment: 'node',
     testTimeout: 60000,
+    // The on-disk module cache does not notice JSON files added to an import.meta.glob
+    // (new sprites, maps), which makes data tests go stale. Startup is fast without it.
+    fsModuleCache: false,
   },
 });

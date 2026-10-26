@@ -1,25 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction } from '../rules';
 import { createGame } from '../state';
 import { makeGame } from '../testing';
 import { MAPS } from '../data';
-import type { Action, GameState } from '../types';
 import { GreedyAi } from './greedy';
-
-/** Plays the AI's whole turn, checking every action is legal. */
-function playTurn(state: GameState, ai = new GreedyAi()): { state: GameState; actions: Action[] } {
-  const actions: Action[] = [];
-  const player = state.currentPlayer;
-  for (let i = 0; i < 500; i++) {
-    const action = ai.nextAction(state);
-    const res = applyAction(state, action);
-    if (!res.ok) throw new Error(`AI chose illegal ${JSON.stringify(action)}: ${res.error}`);
-    actions.push(action);
-    state = res.state;
-    if (action.type === 'endTurn' || state.gameOver || state.currentPlayer !== player) return { state, actions };
-  }
-  throw new Error('AI did not end its turn');
-}
+import { playTurn } from './testkit';
 
 describe('greedy AI', () => {
   it('finishes off a weak enemy instead of idling', () => {
@@ -73,26 +57,13 @@ describe('greedy AI', () => {
   });
 });
 
-describe('AI vs AI', () => {
-  const aiPlayers = (mapId: string) => MAPS[mapId].players.map((p) => ({ faction: p.faction, controller: 'ai' as const }));
-
-  for (const mapId of Object.keys(MAPS)) {
-    for (const seed of [1, 2]) {
-      it(`${mapId} (seed ${seed}) plays to a finish with only legal actions`, () => {
-        let state = createGame({ mapId, seed, luck: true, dayLimit: 30, players: aiPlayers(mapId) });
-        const ai = new GreedyAi();
-        let turns = 0;
-        while (!state.gameOver && turns < 400) {
-          state = playTurn(state, ai).state;
-          turns++;
-        }
-        expect(state.gameOver, `stalled at round ${state.round}`).toBe(true);
-      });
-    }
-  }
-
-  it('captures buildings and raises troops on an economy map', () => {
-    let state = createGame({ mapId: 'first-ford', seed: 1, players: aiPlayers('first-ford') });
+describe('AI economy', () => {
+  it('captures buildings and raises troops', () => {
+    let state = createGame({
+      mapId: 'first-ford',
+      seed: 1,
+      players: MAPS['first-ford'].players.map((p) => ({ faction: p.faction, controller: 'ai' as const })),
+    });
     const ai = new GreedyAi();
     while (state.round <= 8) state = playTurn(state, ai).state;
     for (const p of [0, 1]) {

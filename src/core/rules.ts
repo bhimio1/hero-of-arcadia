@@ -3,7 +3,8 @@
 
 import { baseDamage, canCounter, inAttackRange, LUCK_MAX } from './combat';
 import { getBuildingDef, getUnitDef } from './data';
-import { sameCoord } from './grid';
+import { visibilityMask } from './fog';
+import { sameCoord, toIndex } from './grid';
 import { pathCost } from './pathfinding';
 import { Rng } from './rng';
 import { buildingAt, cloneState, getBuilding, getUnit, incomeOf, scoreOf, unitAt } from './state';
@@ -74,13 +75,29 @@ function doMove(state: GameState, unitId: number, path: Coord[], events: GameEve
   const cost = pathCost(state, def.moveType, path);
   if (cost === null) fail('path is not walkable');
   if (cost > def.move) fail('path is too long');
+  // Enemies the mover can see block the path outright; hidden ones spring an ambush.
+  const mask = state.options.fog ? visibilityMask(state, unit.owner) : null;
+  let stop = path.length - 1;
+  let ambusher: Unit | undefined;
   for (let i = 1; i < path.length; i++) {
     const other = unitAt(state, path[i].x, path[i].y);
-    if (other && other.owner !== unit.owner) fail('path is blocked by an enemy');
+    if (!other || other.owner === unit.owner) continue;
+    if (!mask || mask[toIndex(state.width, other.x, other.y)]) fail('path is blocked by an enemy');
+    if (!ambusher) {
+      ambusher = other;
+      stop = i - 1;
+    }
   }
-  const end = path[path.length - 1];
-  const occupant = unitAt(state, end.x, end.y);
-  if (occupant && occupant.id !== unit.id) fail('destination is occupied');
+  if (ambusher) {
+    // halt on the last free tile before the hidden enemy (friendly units can't be shared)
+    while (stop > 0 && unitAt(state, path[stop].x, path[stop].y)) stop--;
+  } else {
+    const end = path[stop];
+    const occupant = unitAt(state, end.x, end.y);
+    if (occupant && occupant.id !== unit.id) fail('destination is occupied');
+  }
+  const walked = path.slice(0, stop + 1);
+  const end = walked[walked.length - 1];
   unit.x = end.x;
   unit.y = end.y;
   unit.moved = true;
@@ -88,7 +105,11 @@ function doMove(state: GameState, unitId: number, path: Coord[], events: GameEve
   for (const b of state.buildings) {
     if (b.capture?.unitId === unit.id && (b.x !== unit.x || b.y !== unit.y)) b.capture = null;
   }
-  events.push({ type: 'moved', unitId, path: path.map((c) => ({ x: c.x, y: c.y })) });
+  if (walked.length > 1) events.push({ type: 'moved', unitId, path: walked.map((c) => ({ x: c.x, y: c.y })) });
+  if (ambusher) {
+    unit.acted = true; // caught off guard: the unit's turn is over
+    events.push({ type: 'ambushed', unitId, by: ambusher.id, x: ambusher.x, y: ambusher.y });
+  }
 }
 
 function strike(state: GameState, attacker: Unit, defender: Unit, counter: boolean, rng: Rng, events: GameEvent[]): void {
@@ -113,6 +134,7 @@ function doAttack(state: GameState, unitId: number, targetId: number, events: Ga
   if (!target) fail(`no unit ${targetId}`);
   if (target.owner === unit.owner) fail('cannot attack your own unit');
   if (!inAttackRange(unit, unit, target)) fail('target out of range');
+  if (state.options.fog && !visibilityMask(state, unit.owner)[toIndex(state.width, target.x, target.y)]) fail('target is hidden');
   const rng = new Rng(state.rng);
   strike(state, unit, target, false, rng, events);
   if (target.hp > 0 && canCounter(target, unit)) strike(state, target, unit, true, rng, events);

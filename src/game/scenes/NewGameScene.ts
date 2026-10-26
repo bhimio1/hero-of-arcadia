@@ -36,7 +36,7 @@ export class NewGameScene extends Phaser.Scene {
   }
 
   create(): void {
-    addBackdrop(this, 'first-ford');
+    addBackdrop(this, 'wildwood');
     const title = 'NEW GAME';
     text(this, Math.round((VIEW_W - textWidth(title) * 2) / 2), 8, title, UI.highlight).setScale(2).setScrollFactor(0).setDepth(600);
     this.choices = remembered ? { ...remembered } : this.defaultsFor(MAP_IDS[0]);

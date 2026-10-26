@@ -288,6 +288,50 @@ export class HudScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------------------
+  // Hot-seat handover
+
+  /** Hides the battlefield until the next player is ready (so nobody peeks through the fog). */
+  curtain(name: string, faction: string): Promise<void> {
+    return new Promise((resolve) => {
+      const c = this.add.container(0, 0).setDepth(2000);
+      const g = this.add.graphics();
+      g.fillStyle(pal(UI.ink));
+      g.fillRect(0, 0, VIEW_W, VIEW_H);
+      g.fillStyle(pal(TEAM_RAMPS[faction][1]));
+      g.fillRect(0, VIEW_H / 2 - 34, VIEW_W, 2);
+      g.fillRect(0, VIEW_H / 2 + 32, VIEW_W, 2);
+      c.add(g);
+      const lines: [string, number, number][] = [
+        [`${name}`, TEAM_RAMPS[faction][0], 2],
+        ['YOUR TURN', UI.text, 1],
+        ['OTHER PLAYERS: LOOK AWAY!', UI.textDim, 1],
+        ['CLICK OR PRESS ENTER', UI.highlight, 1],
+      ];
+      let y = VIEW_H / 2 - 26;
+      for (const [str, color, scale] of lines) {
+        const t = text(this, Math.round((VIEW_W - textWidth(str) * scale) / 2), Math.round(y), str, color).setScale(scale);
+        c.add(t);
+        y += scale === 2 ? 22 : 12;
+      }
+      const kb = this.input.keyboard!;
+      const done = () => {
+        kb.off('keydown-ENTER', done);
+        kb.off('keydown-SPACE', done);
+        this.input.off('pointerup', done);
+        sfx.play('confirm');
+        c.destroy();
+        resolve();
+      };
+      // wait a moment so the click that ended the previous turn doesn't dismiss it
+      this.time.delayedCall(300, () => {
+        kb.on('keydown-ENTER', done);
+        kb.on('keydown-SPACE', done);
+        this.input.on('pointerup', done);
+      });
+    });
+  }
+
+  // ---------------------------------------------------------------------------
   // Banner
 
   async banner(line: string, faction: string, sub?: string): Promise<void> {

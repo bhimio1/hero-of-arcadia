@@ -91,10 +91,22 @@ export class UnitLayer {
     return this.sprites.get(id);
   }
 
+  /** Makes sure a sprite exists for `unit`, placed at `at` (used to animate units leaving the fog). */
+  ensure(unit: Unit, at: Coord): void {
+    if (this.sprites.has(unit.id)) return;
+    const s = new UnitSprite(this.scene);
+    s.facingLeft = this.defaultFacingLeft(unit.owner);
+    s.setPosition(at.x * TILE, at.y * TILE);
+    s.setDepth(DEPTH_UNITS + at.y);
+    s.apply(unit, this.teamOf(unit.owner), s.facingLeft);
+    this.sprites.set(unit.id, s);
+  }
+
   /** Walks a unit along a path, one tile at a time. */
-  async moveAlong(id: number, path: Coord[], onStep?: (c: Coord) => void): Promise<void> {
+  async moveAlong(id: number, path: Coord[], onStep?: (c: Coord) => void, visibleAt?: (c: Coord) => boolean): Promise<void> {
     const s = this.sprites.get(id);
     if (!s || path.length < 2) return;
+    if (visibleAt) s.setVisible(visibleAt(path[0]));
     for (let i = 1; i < path.length; i++) {
       const c = path[i];
       const prev = path[i - 1];
@@ -107,7 +119,8 @@ export class UnitLayer {
         await tween(this.scene, { targets: s, x: c.x * TILE, y: c.y * TILE, duration: this.speed.step });
       }
       s.setPosition(c.x * TILE, c.y * TILE);
-      onStep?.(c);
+      if (visibleAt) s.setVisible(visibleAt(c));
+      if (s.visible) onStep?.(c);
     }
   }
 

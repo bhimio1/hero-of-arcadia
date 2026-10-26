@@ -19,7 +19,7 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     this.menu = null;
     this.credits = null;
-    addBackdrop(this, 'first-ford');
+    addBackdrop(this, 'wildwood');
     // solid band behind the title so it reads cleanly over the dithered map
     const band = this.add.graphics().setScrollFactor(0).setDepth(590);
     band.fillStyle(pal(1));

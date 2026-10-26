@@ -9,7 +9,7 @@
   {
     "id": "barracks", "name": "Barracks", "char": "B",
     "defense": 2, "income": 50, "heal": 2, "capturePoints": 4, "hq": false,
-    "produces": ["pikeman", "archer", "rider", "catapult"],
+    "produces": ["pikeman", "shieldbearer", "archer", "scout", "rider", "battlemage", "catapult"],
     "moveCost": { "foot": 1, "mounted": 1, "wheeled": 1 },
     "blurb": "Raises new troops. One per turn, if the yard is clear."
   },

@@ -2,6 +2,8 @@
 // reference for what the UI should offer.
 
 import { targetsFrom } from './combat';
+import { visibilityMask } from './fog';
+import { toIndex } from './grid';
 import { getBuildingDef, getUnitDef } from './data';
 import { computeReach, destinations, pathTo } from './pathfinding';
 import { buildingAt, unitAt } from './state';
@@ -21,7 +23,9 @@ export function unitActions(state: GameState, unit: Unit): Action[] {
     }
   }
   if (!unit.moved || def.moveAndFire) {
-    for (const t of targetsFrom(state, unit, unit)) out.push({ type: 'attack', unitId: unit.id, targetId: t.id });
+    const mask = state.options.fog ? visibilityMask(state, unit.owner) : null;
+    const seen = (u: Unit) => !mask || mask[toIndex(state.width, u.x, u.y)];
+    for (const t of targetsFrom(state, unit, unit, seen)) out.push({ type: 'attack', unitId: unit.id, targetId: t.id });
   }
   if (def.canCapture) {
     const b = buildingAt(state, unit.x, unit.y);

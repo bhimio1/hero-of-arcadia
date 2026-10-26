@@ -37,7 +37,7 @@ export class SavesScene extends Phaser.Scene {
     this.menu = null;
     this.details = null;
     if (data.from === 'Menu') {
-      addBackdrop(this, 'first-ford');
+      addBackdrop(this, 'wildwood');
     } else {
       bakeDither(this, 'dither-shade', PALETTE_RGB[1]);
       this.add.tileSprite(0, 0, VIEW_W, VIEW_H, 'dither-shade', 'a').setOrigin(0, 0);

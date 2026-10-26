@@ -1,6 +1,7 @@
 // A Match is a game in progress: its setup, the action log and the current state.
 // The log plus the setup's seed is all that is needed to rebuild any state (see replay).
 
+import { visibleEnemyIds } from './fog';
 import { applyAction } from './rules';
 import { createGame, type GameSetup } from './state';
 import type { Action, GameEvent, GameState } from './types';
@@ -14,6 +15,8 @@ export interface Match {
   history: GameState[];
   /** Index into history/actions from which undo is allowed (actions loaded from a save cannot be undone). */
   undoFloor: number;
+  /** Set when the last move revealed hidden enemies, which makes it final. */
+  lastMoveRevealed?: boolean;
 }
 
 export function newMatch(setup: GameSetup): Match {
@@ -23,8 +26,16 @@ export function newMatch(setup: GameSetup): Match {
 export type DispatchResult = { ok: true; events: GameEvent[] } | { ok: false; error: string };
 
 export function dispatch(match: Match, action: Action): DispatchResult {
-  const res = applyAction(match.state, action);
+  const before = match.state;
+  const res = applyAction(before, action);
   if (!res.ok) return res;
+  match.lastMoveRevealed = false;
+  if (action.type === 'move' && before.options.fog) {
+    // taking back a move that scouted the enemy would let players peek for free
+    const player = before.currentPlayer;
+    const known = visibleEnemyIds(before, player);
+    for (const id of visibleEnemyIds(res.state, player)) if (!known.has(id)) match.lastMoveRevealed = true;
+  }
   match.history.push(match.state);
   match.actions.push(action);
   match.state = res.state;
@@ -36,7 +47,7 @@ export function canUndo(match: Match): boolean {
   const n = match.actions.length;
   if (n === 0 || n <= match.undoFloor) return false;
   const last = match.actions[n - 1];
-  if (last.type !== 'move') return false;
+  if (last.type !== 'move' || match.lastMoveRevealed) return false;
   const unit = match.state.units.find((u) => u.id === last.unitId);
   return !!unit && !unit.acted;
 }
