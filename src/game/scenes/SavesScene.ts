@@ -1,8 +1,9 @@
 // Save / load screen with four slots (one autosave, three manual).
 
 import Phaser from 'phaser';
-import { getFaction, getMap } from '../../core/data';
+import { getFaction } from '../../core/data';
 import type { Match } from '../../core/match';
+import { setupMap } from '../../core/state';
 import { makeSave, SLOT_IDS, verifySave, type SaveData, type SlotId } from '../../core/save';
 import { VIEW_H, VIEW_W } from '../config';
 import { sfx } from '../audio/sfx';
@@ -75,8 +76,8 @@ export class SavesScene extends Phaser.Scene {
     this.details?.destroy();
     this.details = null;
     if (!save) return;
-    const map = getMap(save.snapshot.mapId);
-    const key = minimapTexture(this, map, 2);
+    const map = setupMap(save.setup);
+    const key = minimapTexture(this, map, 2, save.snapshot.players.map((pl) => pl.faction));
     const tex = this.textures.get(key).getSourceImage() as HTMLCanvasElement;
     const w = 300;
     const h = Math.max(tex.height + 16, 64);

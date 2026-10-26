@@ -300,6 +300,10 @@ export function validateContent(content: Content): { errors: ContentIssue[]; bad
     c.str(b.name, `${p}.name`);
     c.num(b.rivers, `${p}.rivers`, { int: true, min: 0, max: 4 });
     c.num(b.scale, `${p}.scale`, { optional: true, min: 1 });
+    c.bool(b.fog, `${p}.fog`, true);
+    if (c.obj(b.roles, `${p}.roles`, true)) {
+      for (const [role, id] of Object.entries(b.roles!)) c.ref(id, content.terrain, 'terrain', `${p}.roles.${role}`);
+    }
     if (c.list(b.layers, `${p}.layers`)) {
       if (b.layers.length === 0) c.fail(`${p}.layers`, 'needs at least one layer');
       b.layers.forEach((l, i) => {

@@ -2,7 +2,7 @@
 // files so they never drift from the actual numbers.
 
 import Phaser from 'phaser';
-import { BUILDINGS, FACTIONS, TERRAIN, UNITS } from '../../core/data';
+import { BIOMES, BUILDINGS, FACTIONS, TERRAIN, UNITS } from '../../core/data';
 import { describeFaction } from '../../core/describe';
 import type { UnitDef } from '../../core/types';
 import { VIEW_H, VIEW_W } from '../config';
@@ -134,7 +134,39 @@ function factionPages(): Page[] {
   return pages;
 }
 
-/** Rule pages plus unit and faction pages generated from the active content. */
+/** Random map biomes, five to a page. */
+function biomePages(): Page[] {
+  const biomes = Object.values(BIOMES);
+  const perPage = 5;
+  const pages: Page[] = [];
+  for (let i = 0; i < biomes.length; i += perPage) {
+    const group = biomes.slice(i, i + perPage);
+    pages.push({
+      title: biomes.length > perPage ? `RANDOM MAPS ${i / perPage + 1}/${Math.ceil(biomes.length / perPage)}` : 'RANDOM MAPS',
+      build: (scene, panel) => {
+        let y = 24;
+        const put = (line: string, color: number) => {
+          for (const w of wrapText(line, COLS)) {
+            panel.add(text(scene, 12, y, w, color));
+            y += 10;
+          }
+        };
+        if (i === 0) {
+          put('New Game > Map > RANDOM builds a fresh battlefield from a seed. Every army gets the same ground (the map is turned around for each), a road links every keep, and the same seed always gives the same map.', UI.text);
+          y += 6;
+        }
+        for (const b of group) {
+          put(`${b.name}${b.fog ? ' (fog)' : ''}`, UI.highlight);
+          if (b.desc) put(b.desc, UI.textDim);
+          y += 4;
+        }
+      },
+    });
+  }
+  return pages;
+}
+
+/** Rule pages plus unit, faction and biome pages generated from the active content. */
 function buildPages(): Page[] {
   const units = Object.values(UNITS);
   const unitPages: Page[] = [];
@@ -142,7 +174,7 @@ function buildPages(): Page[] {
   const count = Math.ceil(units.length / per);
   for (let i = 0; i < count; i++) unitPages.push(unitPage(units.slice(i * per, i * per + per), i + 1, count));
   const at = RULE_PAGES.findIndex((p) => p.title === 'COMBAT') + 1;
-  return [...RULE_PAGES.slice(0, at), ...unitPages, ...factionPages(), ...RULE_PAGES.slice(at)];
+  return [...RULE_PAGES.slice(0, at), ...unitPages, ...factionPages(), ...RULE_PAGES.slice(at, -1), ...biomePages(), ...RULE_PAGES.slice(-1)];
 }
 
 export class HelpScene extends Phaser.Scene {

@@ -16,6 +16,8 @@ export interface PlayerSetup {
 /** Everything needed to start (and later replay) a game. */
 export interface GameSetup {
   mapId: string;
+  /** The map itself, for maps that are not in the content (generated ones). */
+  map?: MapDef;
   seed: number | string;
   /** Overrides for the map's player slots (faction / controller). */
   players?: PlayerSetup[];
@@ -26,8 +28,13 @@ export interface GameSetup {
   aiStyle?: 'greedy' | 'cautious' | 'reckless';
 }
 
+/** The map a setup is played on: its inline map, or the content map with its id. */
+export function setupMap(setup: GameSetup): MapDef {
+  return setup.map ?? getMap(setup.mapId);
+}
+
 export function createGame(setup: GameSetup, mapOverride?: MapDef): GameState {
-  const map = mapOverride ?? getMap(setup.mapId);
+  const map = mapOverride ?? setupMap(setup);
   const { width, height, terrain } = parseMapTerrain(map);
   const players = map.players.map((slot, i) => ({
     faction: setup.players?.[i]?.faction ?? slot.faction,

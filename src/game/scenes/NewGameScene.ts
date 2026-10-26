@@ -1,10 +1,11 @@
-// New game setup in two pages: first the battlefield, then the armies (faction and
-// player/CPU for each) and battle options.
+// New game setup in two pages: first the battlefield (a hand-made map or a random one
+// with generator options), then the armies (faction and player/CPU for each) and options.
 
 import Phaser from 'phaser';
 import type { AiKind } from '../../core/ai';
-import { FACTIONS, getFaction, MAPS } from '../../core/data';
+import { BIOMES, FACTIONS, getFaction, MAPS } from '../../core/data';
 import { describeFaction } from '../../core/describe';
+import { biomeIds, generatedMapId, generateMap, type BuildingDensity, type GenOptions, type MapSize } from '../../core/procgen';
 import type { GameSetup, PlayerSetup } from '../../core/state';
 import type { MapDef } from '../../core/types';
 import { VIEW_H, VIEW_W } from '../config';
@@ -17,10 +18,19 @@ const DAY_LIMITS = [0, 15, 20, 30, 40] as const;
 const AI_STYLES: readonly AiKind[] = ['greedy', 'cautious', 'reckless'];
 const AI_LABEL: Record<AiKind, string> = { greedy: 'NORMAL', cautious: 'CAUTIOUS', reckless: 'RECKLESS' };
 
+/** Pseudo map id for "generate a map with the options below". */
+const RANDOM_ID = '@random';
+const SIZES: readonly MapSize[] = ['small', 'medium', 'large'];
+const DENSITIES: readonly BuildingDensity[] = ['few', 'normal', 'many'];
+const ARMY_COUNTS: readonly (2 | 4)[] = [2, 4];
+const MAX_SEED = 99999;
+
 type Page = 'map' | 'armies';
+type RandomOptions = Omit<GenOptions, 'factions'>;
 
 interface Choices {
   mapId: string;
+  random: RandomOptions;
   factions: string[];
   controllers: ('human' | 'ai')[];
   fog: boolean;
@@ -34,6 +44,12 @@ let remembered: Choices | null = null;
 const INFO_X = 252;
 const INFO_W = VIEW_W - INFO_X - 8;
 
+const newSeed = () => 1 + Math.floor(Math.random() * MAX_SEED);
+
+function cloneChoices(c: Choices): Choices {
+  return { ...c, random: { ...c.random }, factions: [...c.factions], controllers: [...c.controllers] };
+}
+
 export class NewGameScene extends Phaser.Scene {
   private menu: Menu | null = null;
   private info: Panel | null = null;
@@ -41,6 +57,7 @@ export class NewGameScene extends Phaser.Scene {
   private hint: Phaser.GameObjects.Container | null = null;
   private choices!: Choices;
   private page: Page = 'map';
+  private generated: MapDef | null = null;
 
   constructor() {
     super('NewGame');
@@ -48,26 +65,46 @@ export class NewGameScene extends Phaser.Scene {
 
   create(): void {
     addBackdrop(this, 'wildwood');
-    const valid = remembered && remembered.mapId in MAPS && remembered.factions.every((f) => f in FACTIONS);
-    this.choices = valid ? { ...remembered!, factions: [...remembered!.factions], controllers: [...remembered!.controllers] } : this.defaultsFor(this.mapIds()[0]);
+    const r = remembered;
+    const valid = r && (r.mapId in MAPS || r.mapId === RANDOM_ID) && r.random.biome in BIOMES && r.factions.every((f) => f in FACTIONS);
+    this.generated = null;
+    this.choices = valid ? cloneChoices(r) : this.defaultsFor(this.mapIds()[0]);
     this.page = 'map';
     this.show();
     bindMenuKeys(this, () => this.menu, () => this.back());
   }
 
   private mapIds(): string[] {
-    return Object.keys(MAPS);
+    return [...Object.keys(MAPS), RANDOM_ID];
   }
 
   private get map(): MapDef {
-    return MAPS[this.choices.mapId];
+    return this.choices.mapId === RANDOM_ID ? this.generatedMap(this.choices.random) : MAPS[this.choices.mapId];
+  }
+
+  /** The generated map for `opts` (cached: generating is cheap but not free). */
+  private generatedMap(opts: RandomOptions): MapDef {
+    if (this.generated?.id !== generatedMapId(opts)) {
+      if (this.generated) this.forgetThumbnails(this.generated);
+      this.generated = generateMap(opts);
+    }
+    return this.generated;
+  }
+
+  private forgetThumbnails(map: MapDef): void {
+    const prefix = `minimap-${map.id}-`;
+    for (const key of this.textures.getTextureKeys()) if (key.startsWith(prefix)) this.textures.remove(key);
   }
 
   private defaultsFor(mapId: string, keep?: Choices): Choices {
-    const map = MAPS[mapId];
+    const random: RandomOptions = keep ? { ...keep.random } : { seed: newSeed(), size: 'medium', players: 2, biome: biomeIds()[0], buildings: 'normal' };
+    const map = mapId === RANDOM_ID ? this.generatedMap(random) : MAPS[mapId];
+    // random maps keep the armies picked so far when the number of armies still fits
+    const keepArmies = mapId === RANDOM_ID && keep?.factions.length === map.players.length;
     return {
       mapId,
-      factions: map.players.map((p) => p.faction),
+      random,
+      factions: keepArmies ? [...keep.factions] : map.players.map((p) => p.faction),
       controllers: map.players.map((p, i) => keep?.controllers[i] ?? p.controller),
       fog: map.fog ?? false,
       luck: keep?.luck ?? false,
@@ -87,7 +124,7 @@ export class NewGameScene extends Phaser.Scene {
     m.setScrollFactor(0).setDepth(700);
     this.menu = m;
     m.select(Math.min(selected, items.length - 1));
-    const hint = this.page === 'map' ? 'LEFT/RIGHT: CHANGE MAP   ENTER: NEXT' : 'LEFT/RIGHT: FACTION   ENTER: PLAYER/CPU';
+    const hint = this.page === 'armies' ? 'LEFT/RIGHT: FACTION   ENTER: PLAYER/CPU' : this.choices.mapId === RANDOM_ID ? 'LEFT/RIGHT: CHANGE   ENTER ON SEED: REROLL' : 'LEFT/RIGHT: CHANGE MAP   ENTER: NEXT';
     this.hint = hintText(this, VIEW_H - 16, hint);
     if (this.page === 'map') this.showMapInfo();
   }
@@ -97,13 +134,42 @@ export class NewGameScene extends Phaser.Scene {
 
   private mapItems(): MenuItem[] {
     const c = this.choices;
-    const ids = this.mapIds();
+    const random = c.mapId === RANDOM_ID;
     const items: MenuItem[] = [
-      optionItem('MAP', ids, c.mapId, (id) => MAPS[id].name.toUpperCase(), (id) => {
+      optionItem('MAP', this.mapIds(), c.mapId, (id) => (id === RANDOM_ID ? 'RANDOM' : MAPS[id].name.toUpperCase()), (id) => {
+        const wasRandom = this.choices.mapId === RANDOM_ID;
         this.choices = this.defaultsFor(id, this.choices);
-        this.showMapInfo();
+        // the generator options appear and disappear with "random"
+        if (wasRandom !== (id === RANDOM_ID)) this.show(0);
+        else this.showMapInfo();
       }, () => this.menu, () => 0),
     ];
+    if (random) {
+      const r = c.random;
+      const regenerate = (change: Partial<RandomOptions>) => {
+        Object.assign(this.choices.random, change);
+        this.choices = this.defaultsFor(RANDOM_ID, this.choices);
+        this.showMapInfo();
+      };
+      items.push(optionItem('BIOME', biomeIds(), r.biome, (id) => BIOMES[id].name.toUpperCase(), (biome) => regenerate({ biome }), () => this.menu, () => 1));
+      items.push(optionItem('SIZE', SIZES, r.size, (v) => v.toUpperCase(), (size) => regenerate({ size }), () => this.menu, () => 2));
+      items.push(optionItem('ARMIES', ARMY_COUNTS, r.players, (v) => `${v}`, (players) => regenerate({ players }), () => this.menu, () => 3));
+      items.push(optionItem('BUILDINGS', DENSITIES, r.buildings, (v) => v.toUpperCase(), (buildings) => regenerate({ buildings }), () => this.menu, () => 4));
+      const setSeed = (seed: number) => {
+        regenerate({ seed });
+        this.menu?.setDetail(5, `${seed}`);
+      };
+      items.push({
+        label: 'SEED',
+        detail: `${r.seed}`,
+        onSelect: () => {
+          setSeed(newSeed());
+          sfx.play('cursor');
+        },
+        onLeft: () => setSeed(this.choices.random.seed > 1 ? this.choices.random.seed - 1 : MAX_SEED),
+        onRight: () => setSeed(this.choices.random.seed < MAX_SEED ? this.choices.random.seed + 1 : 1),
+      });
+    }
     items.push({ label: 'NEXT: ARMIES', onSelect: () => this.goto('armies') });
     items.push({ label: 'BACK', onSelect: () => this.back() });
     return items;
@@ -112,7 +178,7 @@ export class NewGameScene extends Phaser.Scene {
   private showMapInfo(): void {
     this.info?.destroy();
     const map = this.map;
-    const key = minimapTexture(this, map, 3);
+    const key = minimapTexture(this, map, 3, this.choices.factions);
     const tex = this.textures.get(key).getSourceImage() as HTMLCanvasElement;
     const lines = wrapText(map.description, 25);
     const h = 16 + tex.height + 10 + lines.length * 10 + 26;
@@ -237,10 +303,13 @@ export class NewGameScene extends Phaser.Scene {
 
   private start(): void {
     const c = this.choices;
-    remembered = { ...c, factions: [...c.factions], controllers: [...c.controllers] };
-    const players: PlayerSetup[] = this.map.players.map((_, i) => ({ faction: c.factions[i], controller: c.controllers[i] }));
+    remembered = cloneChoices(c);
+    const map = this.map;
+    const players: PlayerSetup[] = map.players.map((_, i) => ({ faction: c.factions[i], controller: c.controllers[i] }));
     const setup: GameSetup = {
-      mapId: c.mapId,
+      mapId: map.id,
+      // generated maps are not in the content, so they travel with the game (and its saves)
+      ...(c.mapId === RANDOM_ID ? { map: { ...map, players } } : {}),
       seed: Math.floor(Math.random() * 2 ** 31),
       players,
       fog: c.fog,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GreedyAi } from './ai/greedy';
 import { dispatch, newMatch, type Match } from './match';
+import { generateMap } from './procgen';
 import {
   makeSave,
   MemoryStorage,
@@ -81,6 +82,26 @@ describe('save / load', () => {
     expect(() => parseSave(JSON.stringify(obj))).toThrow(/unknown map/);
     delete obj.snapshot;
     expect(() => parseSave(JSON.stringify(obj))).toThrow(/incomplete/);
+  });
+});
+
+describe('saves on generated maps', () => {
+  it('carry the map with them and replay exactly', () => {
+    const map = generateMap({ seed: 77, size: 'small', players: 2, biome: 'riverlands', buildings: 'normal' });
+    const match = newMatch({ mapId: map.id, map, seed: 5, luck: true, players: map.players.map((p) => ({ ...p, controller: 'ai' })) });
+    const ai = new GreedyAi();
+    while (match.state.round <= 4 && !match.state.gameOver) dispatch(match, ai.nextAction(match.state));
+    const loaded = parseSave(serializeSave(makeSave(match)));
+    expect(loaded.label).toBe(`${map.name} - Day ${match.state.round}`);
+    expect(loaded.setup.map).toEqual(map);
+    expect(verifySave(loaded)).toBe(true);
+  });
+
+  it('are rejected when the map no longer fits the content', () => {
+    const map = generateMap({ seed: 78, size: 'small', players: 2, biome: 'temperate', buildings: 'few' });
+    const save = makeSave(newMatch({ mapId: map.id, map, seed: 1 }));
+    save.setup.map!.buildings![0].type = 'wizard-tower';
+    expect(() => parseSave(serializeSave(save))).toThrow(/does not fit/);
   });
 });
 

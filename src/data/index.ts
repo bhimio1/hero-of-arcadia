@@ -2,6 +2,7 @@
 // Maps are picked up automatically from ./maps/*.json.
 import type { ContentPack } from '../core/content';
 import type { MapDef } from '../core/types';
+import biomes from './biomes.json';
 import buildings from './buildings.json';
 import factions from './factions.json';
 import moveTypes from './moveTypes.json';
@@ -28,6 +29,7 @@ export const BASE_PACK: ContentPack = {
   units,
   buildings,
   factions,
+  biomes,
   rules,
   maps: bundledMaps(),
 } as unknown as ContentPack;

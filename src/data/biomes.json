@@ -1,0 +1,56 @@
+[
+  {
+    "id": "temperate", "name": "Temperate", "desc": "Rolling fields, scattered woods, a river and a few peaks.",
+    "rivers": 1, "scale": 6,
+    "layers": [
+      { "terrain": "water", "elevation": [0, 0.16] },
+      { "terrain": "mountain", "elevation": [0.84, 1.01] },
+      { "terrain": "hills", "elevation": [0.72, 0.84] },
+      { "terrain": "forest", "moisture": [0.63, 1.01] },
+      { "terrain": "plains" }
+    ]
+  },
+  {
+    "id": "woodland", "name": "Woodland", "desc": "Deep forest broken by clearings. Best played with fog.",
+    "rivers": 1, "scale": 5, "fog": true,
+    "layers": [
+      { "terrain": "water", "elevation": [0, 0.1] },
+      { "terrain": "mountain", "elevation": [0.9, 1.01] },
+      { "terrain": "hills", "elevation": [0.78, 0.9] },
+      { "terrain": "forest", "moisture": [0.42, 1.01] },
+      { "terrain": "plains" }
+    ]
+  },
+  {
+    "id": "highlands", "name": "Highlands", "desc": "Ridges and passes. Cavalry beware.",
+    "rivers": 0, "scale": 5,
+    "layers": [
+      { "terrain": "water", "elevation": [0, 0.08] },
+      { "terrain": "mountain", "elevation": [0.68, 1.01] },
+      { "terrain": "hills", "elevation": [0.5, 0.68] },
+      { "terrain": "forest", "moisture": [0.7, 1.01] },
+      { "terrain": "plains" }
+    ]
+  },
+  {
+    "id": "riverlands", "name": "Riverlands", "desc": "Two rivers, lakes and fords. Bridges are worth fighting for.",
+    "rivers": 2, "scale": 7,
+    "layers": [
+      { "terrain": "water", "elevation": [0, 0.22] },
+      { "terrain": "hills", "elevation": [0.82, 1.01] },
+      { "terrain": "forest", "moisture": [0.68, 1.01] },
+      { "terrain": "plains" }
+    ]
+  },
+  {
+    "id": "steppe", "name": "Steppe", "desc": "Open grassland: a paradise for riders and catapults.",
+    "rivers": 0, "scale": 8,
+    "layers": [
+      { "terrain": "water", "elevation": [0, 0.06] },
+      { "terrain": "mountain", "elevation": [0.93, 1.01] },
+      { "terrain": "hills", "elevation": [0.72, 0.93] },
+      { "terrain": "forest", "moisture": [0.76, 1.01] },
+      { "terrain": "plains" }
+    ]
+  }
+]

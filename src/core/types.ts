@@ -32,6 +32,17 @@ export interface BiomeDef {
   rivers: number;
   /** Feature size of the noise; larger values make bigger blobs of forest, hills... */
   scale?: number;
+  /** Suggested fog setting for maps of this biome. */
+  fog?: boolean;
+  /** Terrain ids the generator uses for special features (defaults in parentheses). */
+  roles?: {
+    /** Cleared ground around keeps and under buildings ("plains"). */
+    clear?: string;
+    road?: string;
+    bridge?: string;
+    river?: string;
+    ford?: string;
+  };
 }
 
 export interface MoveTypeDef {

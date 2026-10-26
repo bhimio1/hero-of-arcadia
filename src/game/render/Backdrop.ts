@@ -48,9 +48,12 @@ export function addBackdrop(scene: Phaser.Scene, mapId: string): void {
   });
 }
 
-/** A small map thumbnail texture (`px` pixels per tile); returns its texture key. */
-export function minimapTexture(scene: Phaser.Scene, map: MapDef, px = 3): string {
-  const key = `minimap-${map.id}-${px}`;
+/**
+ * A small map thumbnail texture (`px` pixels per tile); returns its texture key. Armies are
+ * coloured by `factions` (default: the map's own).
+ */
+export function minimapTexture(scene: Phaser.Scene, map: MapDef, px = 3, factions = map.players.map((p) => p.faction)): string {
+  const key = `minimap-${map.id}-${px}-${factions.join('.')}`;
   if (scene.textures.exists(key)) return key;
   const { width, height, terrain } = parseMapTerrain(map);
   const tex = scene.textures.createCanvas(key, width * px, height * px);
@@ -65,10 +68,10 @@ export function minimapTexture(scene: Phaser.Scene, map: MapDef, px = 3): string
     for (let x = 0; x < width; x++) fill(x, y, getTerrain(terrain[y * width + x]).minimap ?? 10);
   }
   for (const b of map.buildings ?? []) {
-    const ramp = b.owner === null ? TEAM_RAMPS.neutral : TEAM_RAMPS[map.players[b.owner].faction];
+    const ramp = b.owner === null ? TEAM_RAMPS.neutral : TEAM_RAMPS[factions[b.owner]];
     fill(b.x, b.y, getBuildingDef(b.type).hq ? ramp[0] : ramp[1]);
   }
-  for (const u of map.units) fill(u.x, u.y, TEAM_RAMPS[map.players[u.owner].faction][0], px > 2 ? 1 : 0);
+  for (const u of map.units) fill(u.x, u.y, TEAM_RAMPS[factions[u.owner]][0], px > 2 ? 1 : 0);
   tex.refresh();
   return key;
 }

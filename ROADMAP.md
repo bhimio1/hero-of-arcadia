@@ -84,6 +84,17 @@
   faction plays under the AI; perk-free test factions keep rules tests independent of
   balance.
 
+- **M11 — Procedural maps.** A seeded generator (`procgen.ts`) builds maps from biome
+  recipes in `biomes.json` (Temperate, Woodland, Highlands, Riverlands, Steppe): value
+  noise for elevation and moisture mapped to terrain layers, rivers, cleared start areas,
+  cheapest-path roads with bridges, fords, keeps, barracks and villages, and starting
+  armies from `rules.json`. Maps are symmetric (half turn for two armies, quarter turn
+  for four) so they are fair by construction. New Game gains a RANDOM map with biome,
+  size, armies, building density and seed (reroll, or step through seeds) and a live
+  thumbnail. Generated maps travel inside the game setup and saves. Tests: 90 option
+  combinations are valid, symmetric, fair and connected for every movement type; the
+  AI plays generated maps to a finish; saves on generated maps replay exactly.
+
 ## Next
 
 - Enable GitHub Pages (Settings → Pages → Source: GitHub Actions) so the web build goes live.
@@ -95,8 +106,6 @@
 
 - Campaign: a string of maps with a light story and carried-over veterans.
 - Replay viewer: step through a saved game from its seed + action log.
-- Procedurally generated maps (the map format and validation are ready for it).
-- Faction perks (e.g. cheaper riders for one army, better healing for another).
 - Smarter AI: look-ahead, focus fire, retreating wounded units to heal, scouting in fog.
 - Keyboard-only cursor for choosing tiles without a mouse; gamepad support.
 - Chiptune music tracks; more sound variety.

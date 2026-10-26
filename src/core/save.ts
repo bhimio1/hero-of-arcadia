@@ -2,10 +2,10 @@
 // snapshot of the current state. The snapshot makes loading instant; the log lets any
 // save be replayed and verified from scratch.
 
-import { getMap } from './data';
+import { validateMap } from './data';
 import type { Match } from './match';
 import { applyAction } from './rules';
-import { createGame, STATE_VERSION, type GameSetup } from './state';
+import { createGame, setupMap, STATE_VERSION, type GameSetup } from './state';
 import type { Action, GameState } from './types';
 
 export const SAVE_FORMAT = 'hero-of-arcadia-save';
@@ -33,7 +33,7 @@ export interface StorageLike {
 }
 
 export function makeSave(match: Match, now = new Date()): SaveData {
-  const map = getMap(match.state.mapId);
+  const map = setupMap(match.setup);
   return {
     format: SAVE_FORMAT,
     version: SAVE_VERSION,
@@ -65,9 +65,11 @@ export function parseSave(json: string): SaveData {
   }
   if (d.snapshot.version !== STATE_VERSION) throw new SaveError('save was made by an incompatible version');
   try {
-    getMap(d.setup.mapId);
+    // generated maps travel inside the save; they must still fit the current content
+    if (d.setup.map) validateMap(d.setup.map);
+    else setupMap(d.setup);
   } catch {
-    throw new SaveError(`save uses unknown map "${d.setup.mapId}"`);
+    throw new SaveError(d.setup.map ? `save's map "${d.setup.map.name}" does not fit the current content` : `save uses unknown map "${d.setup.mapId}"`);
   }
   return d as SaveData;
 }

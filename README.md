@@ -16,7 +16,8 @@ enabled, see [Releases](#releases)). Desktop installers are attached to tagged r
 ## Features
 
 - Eight factions, each with its own perks and most with a unique unit.
-- Five hand-made maps, from a quick skirmish to a four-army free-for-all.
+- Five hand-made maps, from a quick skirmish to a four-army free-for-all, plus endless
+  random maps: pick a biome, size, number of armies and building density, then a seed.
 - Twelve unit types with distinct roles and matchups, all defined in JSON.
 - Economy: villages, barracks and keeps pay gold, heal troops and can be captured.
 - Fog of war with forest ambushes, high-ground vision and scouts.
@@ -100,6 +101,13 @@ Pick factions per army on the second page of **New Game** (left/right cycles fac
 | Wildwood | 32×22 | 2 | Fog. Dense forest and a winding stream. |
 | Four Crowns | 25×25 | 4 | Free-for-all around a lake with an island barracks. |
 
+**Random maps** (New Game → Map → RANDOM) are generated from a seed and a biome
+(Temperate, Woodland, Highlands, Riverlands, Steppe). They are symmetric, so every army
+gets the same ground (a half turn for two armies, a quarter turn for four), and a road
+with bridges always links every keep. The same options and seed always give the same
+map, and generated maps are stored inside saves so they load even if the generator
+changes.
+
 ### Controls
 
 | Input | Action |
@@ -137,6 +145,7 @@ src/
   core/          Rules engine: plain TypeScript, no Phaser, no DOM (enforced by ESLint)
     rules.ts       applyAction(state, action) -> { state, events }: the only way to change a game
     pathfinding.ts Dijkstra movement ranges, paths, distance fields
+    procgen.ts     seeded random map generator (biomes from biomes.json)
     combat.ts      damage, counters, previews, threat ranges
     fog.ts         visibility and per-player views
     match.ts       action log, undo
@@ -163,8 +172,8 @@ Design notes:
 
 ## Modding
 
-**Maps** live in `src/data/maps/*.json` and are listed in `src/data/maps/index.ts`. Terrain
-is ASCII art; units and buildings are lists:
+**Maps** live in `src/data/maps/*.json` and are picked up automatically. Terrain is ASCII
+art; units and buildings are lists:
 
 ```jsonc
 {
@@ -182,6 +191,10 @@ Maps are validated on startup and by `npm test` (bad characters, units on impass
 ground, buildings in rivers, ...), and the AI-vs-AI tests play every map to the end.
 
 **Units, terrain and buildings**: edit `units.json`, `terrain.json`, `buildings.json`.
+
+**Biomes** for random maps are recipes in `biomes.json`: noise layers tried in order
+(`{ "terrain": "hills", "elevation": [0.72, 0.84] }`, `"moisture"` works the same way), a
+number of rivers, a noise scale and a default fog setting.
 
 **Sprites** are 16×16 pixel grids in `src/data/sprites/<folder>/<id>.json`. Each character
 maps to a DawnBringer 32 colour in `sprites/legend.json`; `1`, `2`, `3` are the team colour
