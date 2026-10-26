@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Hero of Arcadia",
+  "version": "1.0.0",
+  "identifier": "io.github.bhimio1.heroofarcadia",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Hero of Arcadia",
+        "width": 960,
+        "height": 540,
+        "minWidth": 480,
+        "minHeight": 270,
+        "resizable": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "StrategyGame",
+    "shortDescription": "Retro pixel-art turn-based tactics",
+    "longDescription": "Lead the Cobalt League across hand-made battlefields: move, fight, capture and build until one banner stands.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

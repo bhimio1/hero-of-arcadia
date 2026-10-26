@@ -56,16 +56,28 @@
   *Wildwood* (fog, dense forest), *Four Crowns* (four-army free-for-all). Hot-seat for up
   to four players with a handover screen between human turns when fog is on.
 
+- **M8 — Releases.** GitHub Actions: CI (lint, tests, build) on branches and pull
+  requests; GitHub Pages deploy on every push to `main`; Tauri desktop builds (Windows,
+  macOS Apple Silicon + Intel, Linux) attached to a draft release on `v*` tags. Tauri 2
+  desktop shell with generated icons (the Linux `.deb` was built and launched locally).
+  Also: How to Play screen with tables generated from the data files, PNG overrides
+  for hand-drawn unit/building art, README with screenshots and modding guide.
+
 ## Next
 
-- M8 — CI, GitHub Pages deploy, Tauri desktop builds.
+- Enable GitHub Pages (Settings → Pages → Source: GitHub Actions) so the web build goes live.
+- Push a `v1.0.0` tag to produce the first desktop installers; sign them for Windows and
+  macOS if distribution beyond friends is planned.
+- Playtest and tune unit costs/stats and AI caution on each map.
 
 ## Later
 
-- Hot-seat for 3–4 players.
-- Replay viewer (step through a saved game from its seed + action log).
-- Procedurally generated maps.
-- Faction perks.
-- Smarter AI (look-ahead, focus fire, retreat to heal).
-- Chiptune music.
-- Hand-drawn art to replace the procedural grids.
+- Campaign: a string of maps with a light story and carried-over veterans.
+- Replay viewer: step through a saved game from its seed + action log.
+- Procedurally generated maps (the map format and validation are ready for it).
+- Faction perks (e.g. cheaper riders for one army, better healing for another).
+- Smarter AI: look-ahead, focus fire, retreating wounded units to heal, scouting in fog.
+- Keyboard-only cursor for choosing tiles without a mouse; gamepad support.
+- Chiptune music tracks; more sound variety.
+- Online multiplayer (the action log already makes games easy to sync).
+- Map editor.

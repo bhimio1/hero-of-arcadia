@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { bakeAllSprites, bakeSolid } from '../gfx/bake';
+import { bakeAllSprites, bakeSolid, preloadOverrides } from '../gfx/bake';
 import { bakeFont, loadFontFace } from '../gfx/font';
 import { sfx } from '../audio/sfx';
 import { setZoomSetting } from '../display';
@@ -9,6 +9,11 @@ import { getSettings } from '../settings';
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('Boot');
+  }
+
+  preload(): void {
+    // hand-drawn replacements for the built-in pixel grids, if any are configured
+    preloadOverrides(this);
   }
 
   async create(): Promise<void> {

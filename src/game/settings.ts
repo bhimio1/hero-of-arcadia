@@ -75,6 +75,6 @@ export function animTimings(speed: AnimSpeed): { step: number; fx: number; aiPau
     case 'instant':
       return { step: 0, fx: 0, aiPause: 0 };
     default:
-      return { step: 70, fx: 1, aiPause: 220 };
+      return { step: 60, fx: 1, aiPause: 150 };
   }
 }

@@ -675,8 +675,8 @@ export class BattleScene extends Phaser.Scene {
       sfx.play('cancel');
       close();
     } });
-    const s = this.screenOf(b);
-    this.hud.openMenu(items, s.x + TILE + 4, s.y - 20, 140);
+    // top right, clear of the info panel that shows the highlighted unit's stats
+    this.hud.openMenu(items, VIEW_W, 26, 140);
     this.buildMenuOpen = true;
   }
 
@@ -824,7 +824,7 @@ export class BattleScene extends Phaser.Scene {
       if (!target || !this.canViewerSee(target)) return;
       this.overlays.show('target', [{ x: target.x, y: target.y }]);
       this.showPreview(unit, target);
-      await wait(this, this.aiPause * 3);
+      await wait(this, this.aiPause * 2.5);
       this.hud.hidePreview();
       this.overlays.clear('target');
     }

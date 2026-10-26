@@ -1,0 +1,4 @@
+{
+  "_readme": "Map a sprite key (folder/id) to a PNG under public/. The PNG is a horizontal strip of frames in the same order as the sprite's JSON (each animation's frames in turn). Paint team-coloured parts with the Cobalt ramp (#639bff, #5b6ee1, #3f3f74) and they are recoloured for every army. Example: \"units/pikeman\": \"sprites/units/pikeman.png\"",
+  "overrides": {}
+}

@@ -55,6 +55,7 @@ export class MenuScene extends Phaser.Scene {
       { label: 'NEW GAME', onSelect: () => this.go('NewGame') },
       { label: 'CONTINUE', enabled: hasAuto, onSelect: () => this.continueGame() },
       { label: 'LOAD GAME', onSelect: () => this.go('Saves', { mode: 'load', from: 'Menu' }) },
+      { label: 'HOW TO PLAY', onSelect: () => this.go('Help') },
       { label: 'SETTINGS', onSelect: () => this.go('Settings', { from: 'Menu' }) },
       { label: 'CREDITS', onSelect: () => this.showCredits() },
     ];

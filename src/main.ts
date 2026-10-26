@@ -6,6 +6,7 @@ import { getSettings } from './game/settings';
 import { BattleScene } from './game/scenes/BattleScene';
 import { BootScene } from './game/scenes/BootScene';
 import { GameOverScene } from './game/scenes/GameOverScene';
+import { HelpScene } from './game/scenes/HelpScene';
 import { HudScene } from './game/scenes/HudScene';
 import { MenuScene } from './game/scenes/MenuScene';
 import { NewGameScene } from './game/scenes/NewGameScene';
@@ -24,7 +25,7 @@ const game = new Phaser.Game({
   scale: { mode: Phaser.Scale.NONE, zoom: computeZoom(getSettings().zoom) },
   disableContextMenu: true,
   banner: false,
-  scene: [BootScene, MenuScene, NewGameScene, SavesScene, SettingsScene, BattleScene, HudScene, GameOverScene],
+  scene: [BootScene, MenuScene, NewGameScene, SavesScene, SettingsScene, HelpScene, BattleScene, HudScene, GameOverScene],
 });
 
 installResizeHandler(game);

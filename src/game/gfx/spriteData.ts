@@ -3,6 +3,7 @@
 // later be replaced by hand-drawn PNGs without touching the renderer.
 
 import legendJson from '../../data/sprites/legend.json';
+import overridesJson from '../../data/sprites/overrides.json';
 import { DIM_MAP, PALETTE_RGB, TEAM_RAMPS } from './palette';
 
 export type LegendValue = number | 'team.light' | 'team.mid' | 'team.dark' | null;
@@ -19,11 +20,14 @@ const DEFAULT_LEGEND = legendJson as Record<string, LegendValue>;
 
 const modules = import.meta.glob<SpriteFile>('../../data/sprites/**/*.json', { eager: true, import: 'default' });
 
+/** Sprite keys replaced by hand-drawn PNGs (see src/data/sprites/overrides.json). */
+export const SPRITE_OVERRIDES: Record<string, string> = (overridesJson as { overrides: Record<string, string> }).overrides;
+
 /** All sprite files keyed by "<folder>/<id>", e.g. "units/pikeman". */
 export const SPRITES: Record<string, SpriteFile> = {};
 for (const [path, file] of Object.entries(modules)) {
   const m = /sprites\/(.+)\/([^/]+)\.json$/.exec(path);
-  if (!m) continue; // legend.json sits at the root
+  if (!m) continue; // legend.json and overrides.json sit at the root
   SPRITES[`${m[1]}/${m[2]}`] = file;
 }
 

@@ -8,8 +8,8 @@
 // Animations use the texture key plus "/<anim>", e.g. "units/pikeman:cobalt/idle".
 
 import Phaser from 'phaser';
-import { SPRITES, gridSize, gridToRGBA, rotateGrid, type Grid, type SpriteFile } from './spriteData';
-import { TEAM_IDS } from './palette';
+import { SPRITE_OVERRIDES, SPRITES, gridSize, gridToRGBA, rotateGrid, type Grid, type SpriteFile } from './spriteData';
+import { PALETTE_RGB, TEAM_IDS, TEAM_RAMPS } from './palette';
 
 interface FrameSpec {
   name: string;
@@ -61,9 +61,72 @@ function makeAnims(scene: Phaser.Scene, key: string, file: SpriteFile): void {
   }
 }
 
+/** Texture key the loader uses for a sprite's PNG override. */
+export function overrideKey(path: string): string {
+  return `override:${path}`;
+}
+
+/** Queues every PNG listed in overrides.json; call from a scene's preload(). */
+export function preloadOverrides(scene: Phaser.Scene): void {
+  for (const [path, url] of Object.entries(SPRITE_OVERRIDES)) scene.load.image(overrideKey(path), url);
+}
+
+/**
+ * Bakes a hand-drawn PNG strip in place of a grid sprite (units and buildings). Pixels painted in the Cobalt
+ * ramp are swapped for the team's ramp; "dim" variants are darkened by 40%.
+ */
+function bakeFromImage(scene: Phaser.Scene, key: string, img: HTMLImageElement, frames: FrameSpec[], team?: string, dim = false): void {
+  if (scene.textures.exists(key)) scene.textures.remove(key);
+  const sizes = frames.map((f) => gridSize(f.grid));
+  const width = sizes.reduce((s, z) => s + z.w + 1, 0);
+  const height = Math.max(...sizes.map((z) => z.h));
+  const tex = scene.textures.createCanvas(key, width, height);
+  if (!tex) return;
+  const ctx = tex.getContext();
+  const src = document.createElement('canvas');
+  src.width = img.width;
+  src.height = img.height;
+  const sctx = src.getContext('2d', { willReadFrequently: true })!;
+  sctx.drawImage(img, 0, 0);
+  const swap = new Map<string, [number, number, number]>();
+  const from = TEAM_RAMPS.cobalt;
+  const to = TEAM_RAMPS[team ?? 'cobalt'] ?? from;
+  from.forEach((idx, i) => swap.set(PALETTE_RGB[idx].join(','), PALETTE_RGB[to[i]]));
+  let sx = 0;
+  let dx = 0;
+  frames.forEach((f, i) => {
+    const { w, h } = sizes[i];
+    const data = sctx.getImageData(sx, 0, w, h);
+    for (let p = 0; p < data.data.length; p += 4) {
+      const rgb = swap.get(`${data.data[p]},${data.data[p + 1]},${data.data[p + 2]}`);
+      if (rgb) [data.data[p], data.data[p + 1], data.data[p + 2]] = rgb;
+      if (dim) for (let c = 0; c < 3; c++) data.data[p + c] = Math.round(data.data[p + c] * 0.6);
+    }
+    ctx.putImageData(data, dx, 0);
+    tex.add(f.name, 0, dx, 0, w, h);
+    sx += w;
+    dx += w + 1;
+  });
+  tex.refresh();
+}
+
 export function bakeAllSprites(scene: Phaser.Scene): void {
   for (const [path, file] of Object.entries(SPRITES)) {
     const folder = path.split('/')[0];
+    const override = scene.textures.exists(overrideKey(path))
+      ? (scene.textures.get(overrideKey(path)).getSourceImage() as HTMLImageElement)
+      : null;
+    if (override && (folder === 'units' || folder === 'buildings')) {
+      const frames = framesOf(file, false);
+      for (const team of TEAM_IDS) {
+        for (const dim of [false, true]) {
+          const key = `${path}:${team}${dim ? ':dim' : ''}`;
+          bakeFromImage(scene, key, override, frames, team, dim);
+          makeAnims(scene, key, file);
+        }
+      }
+      continue;
+    }
     if (folder === 'units' || folder === 'buildings') {
       const frames = framesOf(file, false);
       for (const team of TEAM_IDS) {
