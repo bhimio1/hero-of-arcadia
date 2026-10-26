@@ -4,6 +4,8 @@
 
 import legendJson from '../../data/sprites/legend.json';
 import overridesJson from '../../data/sprites/overrides.json';
+import type { ModCheck, ModManifest } from '../../core/mods';
+import type { ContentIssue } from '../../core/validate';
 import { DIM_MAP, PALETTE_RGB, TEAM_RAMPS } from './palette';
 
 export type LegendValue = number | 'team.light' | 'team.mid' | 'team.dark' | null;
@@ -23,12 +25,30 @@ const modules = import.meta.glob<SpriteFile>('../../data/sprites/**/*.json', { e
 /** Sprite keys replaced by hand-drawn PNGs (see src/data/sprites/overrides.json). */
 export const SPRITE_OVERRIDES: Record<string, string> = (overridesJson as { overrides: Record<string, string> }).overrides;
 
-/** All sprite files keyed by "<folder>/<id>", e.g. "units/pikeman". */
-export const SPRITES: Record<string, SpriteFile> = {};
+/** The game's own sprite files keyed by "<folder>/<id>", e.g. "units/pikeman". */
+export const BASE_SPRITES: Record<string, SpriteFile> = {};
 for (const [path, file] of Object.entries(modules)) {
   const m = /sprites\/(.+)\/([^/]+)\.json$/.exec(path);
   if (!m) continue; // legend.json and overrides.json sit at the root
-  SPRITES[`${m[1]}/${m[2]}`] = file;
+  BASE_SPRITES[`${m[1]}/${m[2]}`] = file;
+}
+
+/** Active sprites: the game's own plus those of active mods (see setModSprites). */
+export const SPRITES: Record<string, SpriteFile> = { ...BASE_SPRITES };
+
+/** A mod's sprite entry as a sprite file (the id defaults to the key's last part). */
+function modSpriteFile(key: string, raw: unknown): SpriteFile {
+  const file = raw as SpriteFile;
+  return { ...file, id: file.id ?? key.slice(key.indexOf('/') + 1) };
+}
+
+/** Rebuilds SPRITES from the base sprites plus each mod's sprites, in load order. */
+export function setModSprites(mods: ModManifest[]): void {
+  for (const k of Object.keys(SPRITES)) delete SPRITES[k];
+  Object.assign(SPRITES, BASE_SPRITES);
+  for (const mod of mods) {
+    for (const [key, raw] of Object.entries(mod.sprites ?? {})) SPRITES[key] = modSpriteFile(key, raw);
+  }
 }
 
 export function getSprite(key: string): SpriteFile {
@@ -62,6 +82,67 @@ export function validateSprite(file: SpriteFile): string[] {
   }
   return errors;
 }
+
+const SPRITE_KEY = /^(units|buildings|terrain)\/[a-z0-9][a-z0-9-]*$/;
+const REQUIRED_ANIMS: Record<string, string[]> = { units: ['idle', 'attack'], buildings: ['idle'], terrain: ['default'] };
+const TEAM_VALUES = new Set(['team.light', 'team.mid', 'team.dark']);
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** Problems with the sprites a mod brings (shape, size, legend, animations). */
+export function checkModSprites(mod: ModManifest): ContentIssue[] {
+  const issues: ContentIssue[] = [];
+  for (const [key, raw] of Object.entries(mod.sprites ?? {})) {
+    const path = `sprites["${key}"]`;
+    const fail = (message: string) => issues.push({ path, message });
+    if (!SPRITE_KEY.test(key)) {
+      fail('key must look like "units/<id>", "buildings/<id>" or "terrain/<id>"');
+      continue;
+    }
+    if (!isObject(raw) || !isObject(raw.frames)) {
+      fail('needs "frames": { "<animation>": [ <16 rows of 16 characters>, ... ] }');
+      continue;
+    }
+    const file = modSpriteFile(key, raw);
+    let shapeOk = true;
+    for (const [anim, frames] of Object.entries(file.frames)) {
+      const grids = frames as unknown;
+      const ok = Array.isArray(grids) && grids.length > 0 && grids.every((g) => Array.isArray(g) && g.length === 16 && g.every((row) => typeof row === 'string' && row.length === 16));
+      if (!ok) {
+        fail(`animation "${anim}" must be a list of frames, each 16 rows of 16 characters`);
+        shapeOk = false;
+      }
+    }
+    for (const anim of REQUIRED_ANIMS[key.split('/')[0]]) if (!file.frames[anim]) fail(`needs an "${anim}" animation`);
+    if (file.legend !== undefined && !isObject(file.legend)) fail('"legend" must map characters to palette indices');
+    for (const [ch, v] of Object.entries(isObject(file.legend) ? file.legend : {})) {
+      const valid = v === null || (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < PALETTE_RGB.length) || TEAM_VALUES.has(v as string);
+      if (ch.length !== 1) fail(`legend key "${ch}" must be a single character`);
+      else if (!valid) fail(`legend "${ch}" must be null, a palette index 0-${PALETTE_RGB.length - 1} or team.light/team.mid/team.dark`);
+    }
+    if (shapeOk) for (const e of validateSprite(file)) fail(e);
+  }
+  return issues;
+}
+
+/**
+ * Mod check for the content loader: the mod's sprites are well formed, and every unit,
+ * building and terrain in the resulting content has a sprite to draw it with.
+ */
+export const modSpriteCheck: ModCheck = (content, mod, before) => {
+  const issues = checkModSprites(mod);
+  if (issues.length) return issues;
+  const have = new Set([...Object.keys(BASE_SPRITES), ...[...before, mod].flatMap((m) => Object.keys(m.sprites ?? {}))]);
+  const need = (path: string, key: string, example: string) => {
+    if (!have.has(key)) issues.push({ path, message: `has no sprite: add "${key}" to the mod's sprites, or set "sprite" to an existing one such as "${example}"` });
+  };
+  for (const u of Object.values(content.units)) need(`units.${u.id}`, `units/${u.sprite ?? u.id}`, 'pikeman');
+  for (const b of Object.values(content.buildings)) need(`buildings.${b.id}`, `buildings/${b.sprite ?? b.id}`, 'village');
+  for (const t of Object.values(content.terrain)) need(`terrain.${t.id}`, `terrain/${t.sprite}`, 'plains');
+  return issues;
+};
 
 export interface PixelOptions {
   team?: string;

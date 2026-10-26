@@ -95,6 +95,20 @@
   combinations are valid, symmetric, fair and connected for every movement type; the
   AI plays generated maps to a finish; saves on generated maps replay exactly.
 
+- **M12 — Mod support.** Mods are single JSON files (`format`, `id`, `name`, `version`,
+  `content`, `remove`, `sprites`, optional `requires`) layered over the base game in a
+  player-chosen order. Each mod is checked on top of the ones before it: content
+  validation plus sprite checks (well-formed 16×16 grids, every unit, building and
+  terrain drawable); a failing mod is left out with its exact problems while the rest
+  load. In game: a Mods screen to turn mods on and off, reorder, import files (kept in
+  localStorage) and remove them, with errors shown live; changes re-bake sprites and
+  team colours without a reload. Saves record their mods and explain which are missing.
+  Three bundled example mods in `public/mods/` (Frost Giants: faction, unit and sprite;
+  Marshlands: terrain, terrain sprite, biome and the Mirefen map; Iron Rules: patches,
+  rules and removal). `MODDING.md` documents the format. Tests: mod parsing, ordering,
+  isolation of broken mods, `requires`, save stamps, sprite checks, and every bundled
+  mod loading and playing under the AI.
+
 ## Next
 
 - Enable GitHub Pages (Settings → Pages → Source: GitHub Actions) so the web build goes live.
@@ -110,4 +124,5 @@
 - Keyboard-only cursor for choosing tiles without a mouse; gamepad support.
 - Chiptune music tracks; more sound variety.
 - Online multiplayer (the action log already makes games easy to sync).
-- Map editor.
+- Map editor (exporting maps as mods).
+- Sprites as PNG files inside mods, and a mod browser for sharing them.

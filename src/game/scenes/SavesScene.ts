@@ -55,14 +55,22 @@ export class SavesScene extends Phaser.Scene {
     const list = saves.list();
     const items: MenuItem[] = list.map((slot) => {
       const save = slot.save;
-      const detail = save ? save.label.toUpperCase().slice(0, 26) : slot.error ? 'DAMAGED' : 'EMPTY';
-      const canUse = this.data_.mode === 'load' ? !!save : slot.id !== 'auto';
+      const needs = slot.missingMods;
+      const detail = save ? save.label.toUpperCase().slice(0, 26) : needs ? 'NEEDS MODS' : slot.error ? 'DAMAGED' : 'EMPTY';
+      const canUse = this.data_.mode === 'load' ? !!save || !!needs : slot.id !== 'auto';
       return {
         label: SLOT_LABEL[slot.id],
         detail,
         enabled: canUse,
-        onHover: () => this.showDetails(save),
-        onSelect: () => (this.data_.mode === 'load' ? this.loadSave(save!) : this.saveTo(slot.id)),
+        onHover: () => (needs ? this.showNeeds(needs) : this.showDetails(save)),
+        onSelect: () => {
+          if (this.data_.mode === 'save') this.saveTo(slot.id);
+          else if (save) this.loadSave(save);
+          else {
+            sfx.play('error');
+            this.flash('TURN ITS MODS ON FIRST (MAIN MENU > MODS)', UI.bad);
+          }
+        },
       };
     });
     items.push({ label: 'BACK', onSelect: () => this.close(), onHover: () => this.showDetails(null) });
@@ -70,6 +78,16 @@ export class SavesScene extends Phaser.Scene {
     m.setPosition(Math.round((VIEW_W - m.boxW) / 2), 36).setScrollFactor(0).setDepth(700);
     this.menu = m;
     if (selected >= 0) m.select(selected);
+  }
+
+  /** Explains that a slot's save can't load until some mods are turned on. */
+  private showNeeds(mods: string[]): void {
+    this.details?.destroy();
+    const w = 300;
+    const lines = ['THIS SAVE WAS MADE WITH MODS', 'THAT ARE NOT ON:', ...mods.map((m) => `- ${m.toUpperCase().slice(0, 32)}`)];
+    const p = new Panel(this, Math.round((VIEW_W - w) / 2), 36 + this.menu!.boxH + 6, w, lines.length * 11 + 12).setScrollFactor(0).setDepth(700);
+    lines.forEach((l, i) => p.add(text(this, 8, 7 + i * 11, l, i < 2 ? UI.text : UI.highlight)));
+    this.details = p;
   }
 
   private showDetails(save: SaveData | null): void {
@@ -80,7 +98,7 @@ export class SavesScene extends Phaser.Scene {
     const key = minimapTexture(this, map, 2, save.snapshot.players.map((pl) => pl.faction));
     const tex = this.textures.get(key).getSourceImage() as HTMLCanvasElement;
     const w = 300;
-    const h = Math.max(tex.height + 16, 64);
+    const h = Math.max(tex.height + 16, save.mods?.length ? 76 : 64);
     const p = new Panel(this, Math.round((VIEW_W - w) / 2), 36 + this.menu!.boxH + 6, w, h).setScrollFactor(0).setDepth(700);
     p.add(this.add.image(8, 8, key).setOrigin(0, 0));
     const x = tex.width + 16;
@@ -91,6 +109,11 @@ export class SavesScene extends Phaser.Scene {
     const cur = save.snapshot.players[save.snapshot.currentPlayer];
     p.add(text(this, x, 32, `${getFaction(cur.faction).short.toUpperCase()} TO MOVE`, TEAM_RAMPS[cur.faction][0]));
     p.add(text(this, x, 44, stamp, UI.textDim));
+    if (save.mods?.length) {
+      const names = `MODS: ${save.mods.map((m) => m.name.toUpperCase()).join(', ')}`;
+      const cols = Math.floor((w - x - 8) / textWidth('M'));
+      p.add(text(this, x, 56, names.length > cols ? `${names.slice(0, cols - 3)}...` : names, UI.textDim));
+    }
     this.details = p;
   }
 

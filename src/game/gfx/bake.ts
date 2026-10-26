@@ -49,10 +49,14 @@ function framesOf(file: SpriteFile, rotations: boolean): FrameSpec[] {
   return out;
 }
 
+/** Removes a texture's animations; done before the texture itself is replaced. */
+function dropAnims(scene: Phaser.Scene, key: string, file: SpriteFile): void {
+  for (const anim of Object.keys(file.frames)) if (scene.anims.exists(`${key}/${anim}`)) scene.anims.remove(`${key}/${anim}`);
+}
+
 function makeAnims(scene: Phaser.Scene, key: string, file: SpriteFile): void {
   for (const [anim, grids] of Object.entries(file.frames)) {
     const animKey = `${key}/${anim}`;
-    if (scene.anims.exists(animKey)) scene.anims.remove(animKey);
     scene.anims.create({
       key: animKey,
       frames: grids.map((_, i) => ({ key, frame: `${anim}${i}` })),
@@ -111,6 +115,10 @@ function bakeFromImage(scene: Phaser.Scene, key: string, img: HTMLImageElement, 
   tex.refresh();
 }
 
+/**
+ * Bakes every sprite for every team. Safe to call again after mods change (it replaces the
+ * old textures), but only while no game objects use them, e.g. at the start of a scene.
+ */
 export function bakeAllSprites(scene: Phaser.Scene): void {
   for (const [path, file] of Object.entries(SPRITES)) {
     const folder = path.split('/')[0];
@@ -122,6 +130,7 @@ export function bakeAllSprites(scene: Phaser.Scene): void {
       for (const team of TEAM_IDS) {
         for (const dim of [false, true]) {
           const key = `${path}:${team}${dim ? ':dim' : ''}`;
+          dropAnims(scene, key, file);
           bakeFromImage(scene, key, override, frames, team, dim);
           makeAnims(scene, key, file);
         }
@@ -133,12 +142,14 @@ export function bakeAllSprites(scene: Phaser.Scene): void {
       for (const team of TEAM_IDS) {
         for (const dim of [false, true]) {
           const key = `${path}:${team}${dim ? ':dim' : ''}`;
+          dropAnims(scene, key, file);
           bakeTexture(scene, key, file, frames, team, dim);
           makeAnims(scene, key, file);
         }
       }
     } else {
       const frames = framesOf(file, folder === 'terrain');
+      dropAnims(scene, path, file);
       bakeTexture(scene, path, file, frames);
       makeAnims(scene, path, file);
     }

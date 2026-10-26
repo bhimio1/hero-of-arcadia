@@ -3,10 +3,19 @@
 import Phaser from 'phaser';
 import { GAME_TITLE, VIEW_H, VIEW_W } from '../config';
 import { sfx } from '../audio/sfx';
+import { bakeAllSprites } from '../gfx/bake';
 import { pal, UI } from '../gfx/palette';
 import { addBackdrop } from '../render/Backdrop';
+import { ACTIVE_MODS } from '../../core/mods';
+import { lastModResult } from '../mods';
 import { saves } from '../settings';
 import { bindMenuKeys, Menu, Panel, text, textWidth, type MenuItem } from '../ui/widgets';
+
+/** "2 ON", or "ERROR" when an enabled mod could not be loaded. */
+function modsDetail(): string | undefined {
+  if (lastModResult()?.failed.length) return 'ERROR';
+  return ACTIVE_MODS.length ? `${ACTIVE_MODS.length} ON` : undefined;
+}
 
 export class MenuScene extends Phaser.Scene {
   private menu: Menu | null = null;
@@ -16,9 +25,11 @@ export class MenuScene extends Phaser.Scene {
     super('Menu');
   }
 
-  create(): void {
+  create(data?: { rebake?: boolean }): void {
     this.menu = null;
     this.credits = null;
+    // after mods change, sprites and team colours are rebuilt before anything uses them
+    if (data?.rebake) bakeAllSprites(this);
     addBackdrop(this, 'wildwood');
     // solid band behind the title so it reads cleanly over the dithered map
     const band = this.add.graphics().setScrollFactor(0).setDepth(590);
@@ -57,6 +68,7 @@ export class MenuScene extends Phaser.Scene {
       { label: 'LOAD GAME', onSelect: () => this.go('Saves', { mode: 'load', from: 'Menu' }) },
       { label: 'HOW TO PLAY', onSelect: () => this.go('Help') },
       { label: 'SETTINGS', onSelect: () => this.go('Settings', { from: 'Menu' }) },
+      { label: 'MODS', detail: modsDetail(), onSelect: () => this.go('Mods') },
       { label: 'CREDITS', onSelect: () => this.showCredits() },
     ];
     const m = new Menu(this, 0, 0, items, 136);

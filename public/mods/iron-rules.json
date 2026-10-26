@@ -1,0 +1,35 @@
+{
+  "format": "hero-of-arcadia-mod",
+  "id": "iron-rules",
+  "name": "Iron Rules",
+  "version": "1.0.0",
+  "author": "Hero of Arcadia",
+  "description": "A leaner, harsher war: less starting gold, poorer villages, dearer catapults, weaker riders and swingier luck. Drops the Greenvale skirmish. Example mod: patching existing entries, rules and removing content.",
+  "content": {
+    "rules": {
+      "startingGold": 200,
+      "luckMax": 2
+    },
+    "units": [
+      {
+        "id": "catapult",
+        "cost": 500
+      },
+      {
+        "id": "rider",
+        "attack": 6
+      }
+    ],
+    "buildings": [
+      {
+        "id": "village",
+        "income": 40
+      }
+    ]
+  },
+  "remove": {
+    "maps": [
+      "greenvale"
+    ]
+  }
+}

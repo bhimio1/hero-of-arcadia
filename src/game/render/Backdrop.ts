@@ -1,7 +1,8 @@
 // Menu backgrounds (a live battlefield slowly panning under a dither) and map thumbnails.
 
 import Phaser from 'phaser';
-import { getBuildingDef, getTerrain, parseMapTerrain } from '../../core/data';
+import { getBuildingDef, getTerrain, MAPS, parseMapTerrain } from '../../core/data';
+import { biomeIds, generateMap } from '../../core/procgen';
 import { statsOf } from '../../core/stats';
 import type { MapDef } from '../../core/types';
 import { createGame } from '../../core/state';
@@ -14,9 +15,13 @@ import { UnitLayer } from './UnitLayer';
 
 const PALETTE_HEX_INK = PALETTE_HEX[1];
 
-/** Renders a map as scenery behind menus and pans the camera across it. */
+/**
+ * Renders a map as scenery behind menus and pans the camera across it. Falls back to any
+ * other map (or a generated one) when mods have removed `mapId`.
+ */
 export function addBackdrop(scene: Phaser.Scene, mapId: string): void {
-  const state = createGame({ mapId, seed: 1 });
+  const map = MAPS[mapId] ?? Object.values(MAPS)[0] ?? generateMap({ seed: 1, size: 'large', players: 2, biome: biomeIds()[0], buildings: 'normal' });
+  const state = createGame({ mapId: map.id, seed: 1 }, map);
   const view = new MapView(scene, state);
   const teamOf = (o: number) => state.players[o].faction;
   new BuildingLayer(scene, teamOf).sync(state);

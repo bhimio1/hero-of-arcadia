@@ -74,8 +74,9 @@ export class NewGameScene extends Phaser.Scene {
     bindMenuKeys(this, () => this.menu, () => this.back());
   }
 
+  /** Hand-made maps, then RANDOM (when there are biomes to generate from). */
   private mapIds(): string[] {
-    return [...Object.keys(MAPS), RANDOM_ID];
+    return [...Object.keys(MAPS), ...(biomeIds().length ? [RANDOM_ID] : [])];
   }
 
   private get map(): MapDef {

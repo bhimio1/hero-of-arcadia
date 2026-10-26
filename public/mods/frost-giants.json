@@ -1,0 +1,165 @@
+{
+  "format": "hero-of-arcadia-mod",
+  "id": "frost-giants",
+  "name": "Frost Giants",
+  "version": "1.0.0",
+  "author": "Hero of Arcadia",
+  "description": "A ninth faction, the Frost Kin, who climb like goats and march with giants. Example mod: a new faction, a new unit and its sprite.",
+  "content": {
+    "units": [
+      {
+        "id": "giant",
+        "name": "Giant",
+        "cost": 600,
+        "tags": [
+          "infantry",
+          "heavy"
+        ],
+        "maxHp": 10,
+        "attack": 9,
+        "defense": 3,
+        "move": 3,
+        "moveType": "foot",
+        "range": [
+          1,
+          1
+        ],
+        "vision": 2,
+        "moveAndFire": true,
+        "counter": true,
+        "canCapture": false,
+        "bonusVs": {
+          "catapult": 1.5,
+          "shieldbearer": 1.25
+        },
+        "blurb": "A walking avalanche. Slow and dear, but it flattens shields and siege engines."
+      }
+    ],
+    "factions": [
+      {
+        "id": "frost",
+        "name": "Frost Kin",
+        "short": "Frost",
+        "ramp": [
+          20,
+          22,
+          16
+        ],
+        "blurb": "Mountain clans who march to war beside giants.",
+        "perks": [
+          {
+            "name": "Mountainborn",
+            "desc": "Foot units climb hills and mountains for 1 less.",
+            "effects": [
+              {
+                "type": "moveCost",
+                "terrain": [
+                  "hills",
+                  "mountain"
+                ],
+                "moveTypes": [
+                  "foot"
+                ],
+                "add": -1
+              }
+            ]
+          },
+          {
+            "name": "Thick Hides",
+            "desc": "+1 defense on hills and mountains.",
+            "effects": [
+              {
+                "type": "terrainDefense",
+                "terrain": [
+                  "hills",
+                  "mountain"
+                ],
+                "add": 1
+              }
+            ]
+          },
+          {
+            "name": "Long Winters",
+            "desc": "Income -10%.",
+            "effects": [
+              {
+                "type": "income",
+                "mul": 0.9
+              }
+            ]
+          }
+        ],
+        "roster": {
+          "add": [
+            "giant"
+          ]
+        }
+      }
+    ]
+  },
+  "sprites": {
+    "units/giant": {
+      "fps": 2,
+      "frames": {
+        "idle": [
+          [
+            "...........kkk..",
+            "....kkkk..kbbBk.",
+            "...kssssk.kbbBk.",
+            "...kskskk.kbbBk.",
+            "...kssssk..kbBk.",
+            ".kkk1111kkkkbk..",
+            "k1112222211ssk..",
+            "k1s12222221ssk..",
+            "kss122222213k...",
+            "kss1222222213k..",
+            "kSSkBBBBBBBBk...",
+            ".kk1222223kk....",
+            "..k122k2223k....",
+            "..kssk.kssk.....",
+            ".kSSSk.kSSSk....",
+            ".kkkkk.kkkkk...."
+          ],
+          [
+            "................",
+            "...........kkk..",
+            "....kkkk..kbbBk.",
+            "...kssssk.kbbBk.",
+            "...kskskk.kbbBk.",
+            "...kssssk..kbBk.",
+            ".kkk1111kkkkbk..",
+            "k1112222211ssk..",
+            "k1s12222221ssk..",
+            "kss122222213k...",
+            "kss1222222213k..",
+            "kSSkBBBBBBBBk...",
+            ".kk1222223kk....",
+            "..k122k2223k....",
+            ".kSSSk.kSSSk....",
+            ".kkkkk.kkkkk...."
+          ]
+        ],
+        "attack": [
+          [
+            "................",
+            ".....kkkk.......",
+            "....kssssk......",
+            "....kskskk......",
+            "....kssssk..kkk.",
+            "..kkk1111kkkbbBk",
+            ".k1112222211sbBk",
+            ".k1s12222221sbBk",
+            ".kss122222213kk.",
+            ".kss1222222213k.",
+            ".kSSkBBBBBBBBk..",
+            "..kk1222223kk...",
+            "...k122k2223k...",
+            "...kssk.kssk....",
+            "..kSSSk.kSSSk...",
+            "..kkkkk.kkkkk..."
+          ]
+        ]
+      }
+    }
+  }
+}

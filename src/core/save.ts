@@ -2,8 +2,9 @@
 // snapshot of the current state. The snapshot makes loading instant; the log lets any
 // save be replayed and verified from scratch.
 
-import { validateMap } from './data';
+import { BUILDINGS, FACTIONS, TERRAIN, UNITS, validateMap } from './data';
 import type { Match } from './match';
+import { ACTIVE_MODS, type ModStamp } from './mods';
 import { applyAction } from './rules';
 import { createGame, setupMap, STATE_VERSION, type GameSetup } from './state';
 import type { Action, GameState } from './types';
@@ -21,9 +22,19 @@ export interface SaveData {
   setup: GameSetup;
   actions: Action[];
   snapshot: GameState;
+  /** Mods that were active when the game was saved (missing = none). */
+  mods?: ModStamp[];
 }
 
-export class SaveError extends Error {}
+export class SaveError extends Error {
+  constructor(
+    message: string,
+    /** Names of mods the save was made with that are not active now, when that is why it can't load. */
+    readonly missingMods: string[] = [],
+  ) {
+    super(message);
+  }
+}
 
 /** Anything with the localStorage API (localStorage itself, or an in-memory fake in tests). */
 export interface StorageLike {
@@ -42,7 +53,25 @@ export function makeSave(match: Match, now = new Date()): SaveData {
     setup: structuredClone(match.setup),
     actions: structuredClone(match.actions),
     snapshot: structuredClone(match.state),
+    ...(ACTIVE_MODS.length ? { mods: structuredClone(ACTIVE_MODS) } : {}),
   };
+}
+
+/** Why a save's game can't be played with the active content, or null if it can. */
+export function contentProblem(save: Pick<SaveData, 'setup' | 'snapshot'>): string | null {
+  const s = save.snapshot;
+  const missing = (kind: string, id: string) => `uses unknown ${kind} "${id}"`;
+  try {
+    if (save.setup.map) validateMap(save.setup.map);
+    else setupMap(save.setup);
+  } catch {
+    return save.setup.map ? `has a map ("${save.setup.map.name}") that does not fit the current content` : missing('map', save.setup.mapId);
+  }
+  for (const p of s.players) if (!(p.faction in FACTIONS)) return missing('faction', p.faction);
+  for (const u of s.units) if (!(u.type in UNITS)) return missing('unit', u.type);
+  for (const b of s.buildings) if (!(b.type in BUILDINGS)) return missing('building', b.type);
+  for (const t of new Set(s.terrain)) if (!(t in TERRAIN)) return missing('terrain', t);
+  return null;
 }
 
 export function serializeSave(save: SaveData): string {
@@ -64,12 +93,10 @@ export function parseSave(json: string): SaveData {
     throw new SaveError('save is incomplete');
   }
   if (d.snapshot.version !== STATE_VERSION) throw new SaveError('save was made by an incompatible version');
-  try {
-    // generated maps travel inside the save; they must still fit the current content
-    if (d.setup.map) validateMap(d.setup.map);
-    else setupMap(d.setup);
-  } catch {
-    throw new SaveError(d.setup.map ? `save's map "${d.setup.map.name}" does not fit the current content` : `save uses unknown map "${d.setup.mapId}"`);
+  const problem = contentProblem(d as SaveData);
+  if (problem) {
+    const missingMods = (d.mods ?? []).filter((m) => !ACTIVE_MODS.some((a) => a.id === m.id)).map((m) => m.name);
+    throw new SaveError(missingMods.length ? `save needs mods: ${missingMods.join(', ')}` : `save ${problem}`, missingMods);
   }
   return d as SaveData;
 }
@@ -118,6 +145,8 @@ export interface SlotInfo {
   save: SaveData | null;
   /** Set when a slot holds data that could not be read. */
   error?: string;
+  /** Mods the slot's save needs that are not active. */
+  missingMods?: string[];
 }
 
 export class SaveStore {
@@ -141,7 +170,8 @@ export class SaveStore {
       try {
         return { id, save: this.read(id) };
       } catch (e) {
-        return { id, save: null, error: e instanceof Error ? e.message : String(e) };
+        const missingMods = e instanceof SaveError && e.missingMods.length ? e.missingMods : undefined;
+        return { id, save: null, error: e instanceof Error ? e.message : String(e), missingMods };
       }
     });
   }

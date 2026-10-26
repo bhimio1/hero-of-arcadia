@@ -119,6 +119,9 @@ export function resolveContent(layers: ContentLayer[]): ResolveResult {
     delete content.maps[id];
     warnings.push({ path: `maps.${id}`, message: `left out: ${problem}` });
   }
+  if (Object.keys(content.maps).length === 0 && Object.keys(content.biomes).length === 0) {
+    throw new ContentError([...warnings, { path: 'maps', message: 'nothing to play: no usable maps and no biomes for random maps' }]);
+  }
   return { content, warnings };
 }
 

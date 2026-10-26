@@ -1,0 +1,280 @@
+{
+  "format": "hero-of-arcadia-mod",
+  "id": "marshlands",
+  "name": "Marshlands",
+  "version": "1.0.0",
+  "author": "Hero of Arcadia",
+  "description": "Marsh terrain that bogs down riders and stops wheels, a Fenlands biome for random maps and the Mirefen map. Example mod: terrain, a terrain sprite, a biome and a map.",
+  "content": {
+    "terrain": [
+      {
+        "id": "marsh",
+        "name": "Marsh",
+        "char": "m",
+        "defense": 1,
+        "moveCost": {
+          "foot": 2,
+          "mounted": 3
+        },
+        "sprite": "marsh",
+        "minimap": 11
+      }
+    ],
+    "biomes": [
+      {
+        "id": "fenlands",
+        "name": "Fenlands",
+        "desc": "Reed beds and black pools. Wheels sink; roads are lifelines.",
+        "rivers": 1,
+        "scale": 6,
+        "layers": [
+          {
+            "terrain": "water",
+            "elevation": [
+              0,
+              0.12
+            ]
+          },
+          {
+            "terrain": "marsh",
+            "elevation": [
+              0.12,
+              0.38
+            ]
+          },
+          {
+            "terrain": "hills",
+            "elevation": [
+              0.86,
+              1.01
+            ]
+          },
+          {
+            "terrain": "forest",
+            "moisture": [
+              0.68,
+              1.01
+            ]
+          },
+          {
+            "terrain": "plains"
+          }
+        ]
+      }
+    ],
+    "maps": [
+      {
+        "id": "mirefen",
+        "name": "Mirefen",
+        "description": "Two bridges and a ford cross a slow river between sprawling marshes. Riders bog down; catapults keep to the roads.",
+        "startingGold": 300,
+        "fog": false,
+        "dayLimit": 0,
+        "players": [
+          {
+            "faction": "fen",
+            "controller": "human"
+          },
+          {
+            "faction": "tide",
+            "controller": "ai"
+          }
+        ],
+        "rows": [
+          "........ffmmmm...~..........",
+          ".........mmmm...~~~.........",
+          "........mmmmff....:.........",
+          ".....mm....fff....:~.....=..",
+          "f...mmmmm..ffff...~......=.m",
+          "fmmmmmmmm...fff.~~~mmmm..=mm",
+          "mm.mmmmmm.....f~~.mmmmm..=mm",
+          "mmmmmmmmm....f~~f.mmmmmm==mm",
+          "m.mmmm========b......====m..",
+          "..m====......b========mmmm.m",
+          "mm==mmmmmm.f~~f....mmmmmmmmm",
+          "mm=..mmmmm.~~f.....mmmmmm.mm",
+          "mm=..mmmm~~~.fff...mmmmmmmmf",
+          "m.=......~...ffff..mmmmm...f",
+          "..=.....~:....fff....mm.....",
+          ".........:....ffmmmm........",
+          ".........~~~...mmmm.........",
+          "..........~...mmmmff........"
+        ],
+        "buildings": [
+          {
+            "type": "keep",
+            "x": 2,
+            "y": 15,
+            "owner": 0
+          },
+          {
+            "type": "keep",
+            "x": 25,
+            "y": 2,
+            "owner": 1
+          },
+          {
+            "type": "barracks",
+            "x": 2,
+            "y": 17,
+            "owner": 0
+          },
+          {
+            "type": "barracks",
+            "x": 25,
+            "y": 0,
+            "owner": 1
+          },
+          {
+            "type": "village",
+            "x": 5,
+            "y": 15,
+            "owner": 0
+          },
+          {
+            "type": "village",
+            "x": 22,
+            "y": 2,
+            "owner": 1
+          },
+          {
+            "type": "village",
+            "x": 1,
+            "y": 8,
+            "owner": null
+          },
+          {
+            "type": "village",
+            "x": 26,
+            "y": 9,
+            "owner": null
+          },
+          {
+            "type": "village",
+            "x": 15,
+            "y": 5,
+            "owner": null
+          },
+          {
+            "type": "village",
+            "x": 12,
+            "y": 12,
+            "owner": null
+          },
+          {
+            "type": "village",
+            "x": 14,
+            "y": 16,
+            "owner": null
+          },
+          {
+            "type": "village",
+            "x": 13,
+            "y": 1,
+            "owner": null
+          },
+          {
+            "type": "village",
+            "x": 26,
+            "y": 14,
+            "owner": null
+          },
+          {
+            "type": "village",
+            "x": 1,
+            "y": 3,
+            "owner": null
+          },
+          {
+            "type": "barracks",
+            "x": 25,
+            "y": 11,
+            "owner": null
+          },
+          {
+            "type": "barracks",
+            "x": 2,
+            "y": 6,
+            "owner": null
+          }
+        ],
+        "units": [
+          {
+            "type": "pikeman",
+            "owner": 0,
+            "x": 2,
+            "y": 14
+          },
+          {
+            "type": "pikeman",
+            "owner": 1,
+            "x": 25,
+            "y": 3
+          },
+          {
+            "type": "pikeman",
+            "owner": 0,
+            "x": 1,
+            "y": 15
+          },
+          {
+            "type": "pikeman",
+            "owner": 1,
+            "x": 26,
+            "y": 2
+          },
+          {
+            "type": "archer",
+            "owner": 0,
+            "x": 3,
+            "y": 15
+          },
+          {
+            "type": "archer",
+            "owner": 1,
+            "x": 24,
+            "y": 2
+          },
+          {
+            "type": "rider",
+            "owner": 0,
+            "x": 2,
+            "y": 16
+          },
+          {
+            "type": "rider",
+            "owner": 1,
+            "x": 25,
+            "y": 1
+          }
+        ]
+      }
+    ]
+  },
+  "sprites": {
+    "terrain/marsh": {
+      "frames": {
+        "default": [
+          [
+            "eeeeeeeEeeeeeeee",
+            "eeleeeeeeeeemeee",
+            "eeeemmmmeeeeelee",
+            "eeemVVVVmeeeeeee",
+            "eemVVuuVVmeleeee",
+            "eemVuVVVVmeeeeee",
+            "eeemVVVVmeeeeEee",
+            "eleemmmmeeeeeeee",
+            "eeeeeeeeeemmmmee",
+            "eeeEeeeeemVVVVme",
+            "eeeeeleemVVuVVVm",
+            "eeeeeeeemVVVVVVm",
+            "eemeeeeeemVVVVme",
+            "eeleeEeeeemmmmee",
+            "eeeeeeeeeeeeeele",
+            "eeeeeeleeeeeeeee"
+          ]
+        ]
+      }
+    }
+  }
+}

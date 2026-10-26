@@ -19,6 +19,9 @@ enabled, see [Releases](#releases)). Desktop installers are attached to tagged r
 - Five hand-made maps, from a quick skirmish to a four-army free-for-all, plus endless
   random maps: pick a biome, size, number of armies and building density, then a seed.
 - Twelve unit types with distinct roles and matchups, all defined in JSON.
+- Mod support: JSON mods add or change units, factions, terrain, maps, biomes and rules,
+  with their own pixel sprites. Import them in the game's Mods screen; three example mods
+  are included. See [MODDING.md](MODDING.md).
 - Economy: villages, barracks and keeps pay gold, heal troops and can be captured.
 - Fog of war with forest ambushes, high-ground vision and scouts.
 - An AI opponent that plays by the same rules and only sees what its army sees.
@@ -146,13 +149,17 @@ src/
     rules.ts       applyAction(state, action) -> { state, events }: the only way to change a game
     pathfinding.ts Dijkstra movement ranges, paths, distance fields
     procgen.ts     seeded random map generator (biomes from biomes.json)
+    content.ts     content packs: layering (add, patch, remove) and validation
+    stats.ts       faction perks applied to units, costs, movement, income...
+    mods.ts        mod files: parsing, load order, isolating broken mods
     combat.ts      damage, counters, previews, threat ranges
     fog.ts         visibility and per-player views
     match.ts       action log, undo
     save.ts        save/load, replay and verification, save slots
     ai/            AiController interface and the greedy AI
   game/          Phaser: scenes, rendering, input, UI, audio
-  data/          JSON content: units, terrain, buildings, factions, palette, maps, sprites
+  data/          JSON content: units, terrain, buildings, factions, biomes, rules, maps, sprites
+public/mods/     Example mods shipped with the game (listed in index.json)
 src-tauri/       Desktop wrapper (Tauri 2)
 .github/         CI, GitHub Pages deploy, desktop release builds
 ```
@@ -167,39 +174,30 @@ Design notes:
 - **No cheating AI.** AI players are handed `playerView(state, player)`, which strips
   enemy units hidden by fog. The AI is behind an interface (`src/core/ai/types.ts`) so a
   smarter one can be dropped in.
-- **Data-driven.** Units, terrain, buildings, factions and maps are JSON; the AI's build
-  choices and the How to Play tables are computed from that data.
+- **Data-driven.** Units, terrain, buildings, factions, biomes, rules and maps are JSON;
+  faction perks are data too (effects such as "+1 move for cavalry"). The base game is
+  just the first content layer and mods are further layers on top, validated as a whole;
+  a mod that would break the content is left out with its reasons. The AI's build
+  choices and the How to Play pages are computed from the active content.
 
 ## Modding
 
-**Maps** live in `src/data/maps/*.json` and are picked up automatically. Terrain is ASCII
-art; units and buildings are lists:
+Mods are JSON files that add or change content; the full guide is [MODDING.md](MODDING.md).
+In short:
 
-```jsonc
-{
-  "id": "my-map", "name": "My Map", "description": "...",
-  "startingGold": 300, "fog": false, "dayLimit": 0,
-  "players": [{ "faction": "cobalt", "controller": "human" }, { "faction": "ember", "controller": "ai" }],
-  // . plains  = road  b bridge  f forest  h hills  ^ mountain  : ford  ~ river
-  "rows": ["..ff==..~~..", "..."],
-  "buildings": [{ "type": "keep", "x": 1, "y": 1, "owner": 0 }, { "type": "village", "x": 5, "y": 2, "owner": null }],
-  "units": [{ "type": "pikeman", "owner": 0, "x": 2, "y": 1 }]
-}
-```
+- **Play with mods:** Main menu → **Mods**. Turn the bundled example mods on, or
+  **Import mod file** to add your own. Saves remember which mods they need.
+- **Make a mod:** a file with `"format": "hero-of-arcadia-mod"`, an `id`, `name` and
+  `version`, plus `content` (units, factions, terrain, buildings, biomes, maps, rules),
+  optional `remove` lists and `sprites`. Entries with an existing id are patched, so
+  `{ "id": "catapult", "cost": 500 }` is a complete change.
+- **Ship mods with the game:** drop them in `public/mods/` and list them in
+  `public/mods/index.json`.
 
-Maps are validated on startup and by `npm test` (bad characters, units on impassable
-ground, buildings in rivers, ...), and the AI-vs-AI tests play every map to the end.
-
-**Units, terrain and buildings**: edit `units.json`, `terrain.json`, `buildings.json`.
-
-**Biomes** for random maps are recipes in `biomes.json`: noise layers tried in order
-(`{ "terrain": "hills", "elevation": [0.72, 0.84] }`, `"moisture"` works the same way), a
-number of rivers, a noise scale and a default fog setting.
-
-**Sprites** are 16×16 pixel grids in `src/data/sprites/<folder>/<id>.json`. Each character
-maps to a DawnBringer 32 colour in `sprites/legend.json`; `1`, `2`, `3` are the team colour
-ramp (light, mid, dark), swapped per army. Units and buildings have an `idle` animation
-(2 frames) and units an `attack` frame.
+Changing the base game works the same way, directly in `src/data/`: maps in
+`src/data/maps/*.json` are picked up automatically, and sprites are 16×16 pixel grids in
+`src/data/sprites/<folder>/<id>.json` (`1`, `2`, `3` are the team colour ramp). `npm test`
+validates all of it and plays every map and bundled mod with the AI.
 
 **Hand-drawn art:** to replace a unit or building with a PNG, add it to
 `src/data/sprites/overrides.json`, e.g. `"units/pikeman": "sprites/units/pikeman.png"`, and

@@ -4,8 +4,9 @@ import { bakeFont, loadFontFace } from '../gfx/font';
 import { sfx } from '../audio/sfx';
 import { setZoomSetting } from '../display';
 import { getSettings } from '../settings';
+import { activateMods, loadBundledMods } from '../mods';
 
-/** Bakes the font and all sprite textures, then hands over to the first real scene. */
+/** Loads mods, bakes the font and all sprite textures, then hands over to the first real scene. */
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('Boot');
@@ -18,6 +19,8 @@ export class BootScene extends Phaser.Scene {
 
   async create(): Promise<void> {
     await loadFontFace();
+    await loadBundledMods();
+    activateMods();
     bakeFont(this);
     bakeAllSprites(this);
     bakeSolid(this);
