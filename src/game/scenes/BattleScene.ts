@@ -6,6 +6,7 @@ import { createAi, type AiController } from '../../core/ai';
 import { previewAttack, targetsFrom, terrainDefense, threatTiles } from '../../core/combat';
 import { getBuildingDef, getFaction, getUnitDef } from '../../core/data';
 import { canUndo, dispatch, newMatch, undo, type Match } from '../../core/match';
+import { makeSave, restoreMatch, type SaveData } from '../../core/save';
 import { computeReach, destinations, pathTo, type Reach } from '../../core/pathfinding';
 import { buildingAt, getBuilding, getUnit, terrainAt, unitAt, type GameSetup } from '../../core/state';
 import type { Action, Building, Coord, GameEvent, Unit } from '../../core/types';
@@ -17,6 +18,7 @@ import { BuildingLayer } from '../render/BuildingLayer';
 import { MapView } from '../render/MapView';
 import { Overlays } from '../render/Overlays';
 import { tween, UnitLayer, wait } from '../render/UnitLayer';
+import { animTimings, getSettings, saves } from '../settings';
 import { shadowText } from '../ui/widgets';
 import type { MenuItem } from '../ui/widgets';
 import type { GameOverData } from './GameOverScene';
@@ -34,13 +36,10 @@ interface Selection {
   dests: Coord[];
 }
 
-export interface BattleInit {
-  setup: GameSetup;
-}
+export type BattleInit = { setup: GameSetup; save?: undefined } | { save: SaveData; setup?: undefined };
 
 export class BattleScene extends Phaser.Scene {
   private match!: Match;
-  private initData!: BattleInit;
   private mapView!: MapView;
   private units!: UnitLayer;
   private buildings!: BuildingLayer;
@@ -55,6 +54,7 @@ export class BattleScene extends Phaser.Scene {
   private previewTarget: Unit | null = null;
   private buildMenuOpen = false;
   private lastIncome = 0;
+  private grid!: Phaser.GameObjects.Graphics;
   private ais = new Map<number, AiController>();
   /** Delay between AI actions in ms (scaled by the animation speed setting). */
   private aiPause = 220;
@@ -64,11 +64,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   init(data: BattleInit): void {
-    this.initData = data;
-    this.match = newMatch(data.setup);
+    this.match = data.save ? restoreMatch(data.save) : newMatch(data.setup);
     this.ais.clear();
     this.match.state.players.forEach((p, i) => {
-      if (p.controller === 'ai') this.ais.set(i, createAi());
+      if (p.controller === 'ai') this.ais.set(i, createAi(this.match.setup.aiStyle ?? 'greedy'));
     });
     this.mode = 'idle';
     this.selected = null;
@@ -87,9 +86,14 @@ export class BattleScene extends Phaser.Scene {
     this.buildings.sync(state);
     this.units.sync(state);
 
-    this.scene.launch('Hud', { callbacks: { onEndTurn: () => this.requestEndTurn() } });
+    this.scene.launch('Hud', { callbacks: { onEndTurn: () => this.requestEndTurn(), onMenu: () => this.openPauseMenu() } });
     this.hud = this.scene.get('Hud') as HudScene;
+    this.grid = this.add.graphics().setDepth(45);
+    this.applySettings();
+    const onSettings = () => this.applySettings();
+    this.game.events.on('settings-changed', onSettings);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off('settings-changed', onSettings);
       this.scene.stop('Hud');
       this.scene.stop('GameOver');
     });
@@ -98,7 +102,74 @@ export class BattleScene extends Phaser.Scene {
     this.centerCameraOn(this.firstReadyUnit() ?? { x: 0, y: 0 });
     this.mode = 'busy';
     // the HUD scene finishes its create() on the next tick
-    this.time.delayedCall(0, () => void this.beginTurn());
+    this.time.delayedCall(0, () => {
+      if (this.state.gameOver) void this.showGameOver();
+      else void this.beginTurn();
+    });
+  }
+
+  private applySettings(): void {
+    const s = getSettings();
+    const t = animTimings(s.animSpeed);
+    this.units.speed = { step: t.step, fx: t.fx };
+    this.aiPause = t.aiPause;
+    this.drawGrid(s.grid);
+  }
+
+  /** Faint dotted grid along tile edges. */
+  private drawGrid(on: boolean): void {
+    const g = this.grid;
+    g.clear();
+    if (!on) return;
+    const { width, height } = this.state;
+    g.fillStyle(pal(14));
+    for (let y = 0; y <= height; y++) for (let x = 0; x < width * TILE; x += 2) g.fillRect(x, y * TILE, 1, 1);
+    for (let x = 0; x <= width; x++) for (let y = 0; y < height * TILE; y += 2) g.fillRect(x * TILE, y, 1, 1);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pause menu
+
+  private openPauseMenu(): void {
+    if (this.mode !== 'idle' || this.hud.menuOpen) return;
+    this.clearInspect();
+    sfx.play('select');
+    const overlay = (scene: string, data: object) => {
+      this.hud.closeDialog();
+      this.scene.pause();
+      this.scene.pause('Hud');
+      this.scene.launch(scene, data);
+      this.scene.bringToTop(scene);
+    };
+    this.hud.dialogBox(['PAUSED'], [
+      { label: 'RESUME', onSelect: () => sfx.play('cancel') },
+      { label: 'SAVE GAME', onSelect: () => overlay('Saves', { mode: 'save', from: 'Battle', match: this.match }) },
+      { label: 'LOAD GAME', onSelect: () => overlay('Saves', { mode: 'load', from: 'Battle' }) },
+      { label: 'SETTINGS', onSelect: () => overlay('Settings', { from: 'Battle' }) },
+      { label: 'QUIT TO TITLE', onSelect: () => this.confirmQuit() },
+    ]);
+  }
+
+  private confirmQuit(): void {
+    this.hud.dialogBox(['QUIT TO THE TITLE SCREEN?', 'YOUR LAST AUTOSAVE IS KEPT.'], [
+      { label: 'QUIT', onSelect: () => this.quitToTitle() },
+      { label: 'CANCEL', onSelect: () => sfx.play('cancel') },
+    ]);
+  }
+
+  private quitToTitle(): void {
+    sfx.play('confirm');
+    this.scene.stop('Hud');
+    this.scene.stop('GameOver');
+    this.scene.start('Menu');
+  }
+
+  private autosave(): void {
+    try {
+      saves.write('auto', makeSave(this.match));
+    } catch (e) {
+      console.warn('autosave failed', e);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -381,7 +452,8 @@ export class BattleScene extends Phaser.Scene {
         this.backToMenu();
         break;
       case 'idle':
-        this.clearInspect();
+        if (this.inspected !== null) this.clearInspect();
+        else this.openPauseMenu();
         break;
       default:
         break;
@@ -598,7 +670,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.mode === 'selected') this.deselect();
     if (this.mode !== 'idle') return;
     const ready = this.state.units.filter((u) => this.isReady(u)).length;
-    if (ready === 0) {
+    if (ready === 0 || !getSettings().confirmEndTurn) {
       void this.endTurn();
       return;
     }
@@ -630,6 +702,7 @@ export class BattleScene extends Phaser.Scene {
     const sub = `${getFaction(p.faction).name.toUpperCase()}${income > 0 ? `   +${income}G` : ''}`;
     await this.hud.banner(this.dayLabel(), p.faction, sub);
     const ai = this.ais.get(this.state.currentPlayer);
+    if (!ai) this.autosave();
     if (ai) {
       // run the AI after this event chain has finished animating
       this.time.delayedCall(0, () => void this.runAiTurn(ai));
@@ -694,6 +767,7 @@ export class BattleScene extends Phaser.Scene {
   // Applying actions and animating events
 
   private async perform(action: Action): Promise<boolean> {
+    const actingPlayer = this.state.currentPlayer;
     const res = dispatch(this.match, action);
     if (!res.ok) {
       console.warn('rejected action', action, res.error);
@@ -701,9 +775,12 @@ export class BattleScene extends Phaser.Scene {
       return false;
     }
     this.hud.setButtonsEnabled(false);
+    const actor = actingPlayer;
     for (const ev of res.events) await this.animate(ev);
     this.units.sync(this.state);
     this.buildings.sync(this.state);
+    // keep "Continue" current; never save between a move and the order that completes it
+    if (!this.ais.has(actor) && action.type !== 'move' && action.type !== 'endTurn' && !this.state.gameOver) this.autosave();
     this.hud.setButtonsEnabled(!this.ais.has(this.state.currentPlayer));
     this.refreshHud();
     return true;
@@ -797,13 +874,19 @@ export class BattleScene extends Phaser.Scene {
     this.hud.closeMenu();
     await wait(this, 400);
     const humans = this.state.players.map((p, i) => (p.controller === 'human' ? i : -1)).filter((i) => i >= 0);
+    try {
+      saves.remove('auto');
+    } catch {
+      // storage unavailable: nothing to clean up
+    }
     const data: GameOverData = {
       state: this.state,
       viewer: humans.length === 1 ? humans[0] : null,
       onRematch: () => {
         this.scene.stop('GameOver');
-        this.scene.restart({ setup: { ...this.initData.setup, seed: Date.now() } });
+        this.scene.restart({ setup: { ...this.match.setup, seed: Date.now() } });
       },
+      onMenu: () => this.quitToTitle(),
     };
     this.scene.launch('GameOver', data);
   }

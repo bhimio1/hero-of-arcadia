@@ -8,7 +8,7 @@ import { FONT_SIZE, VIEW_H, VIEW_W } from '../config';
 import { sfx } from '../audio/sfx';
 import { pal, TEAM_RAMPS, UI } from '../gfx/palette';
 import { tween, wait } from '../render/UnitLayer';
-import { Button, Menu, Panel, text, textWidth, type MenuItem } from '../ui/widgets';
+import { Button, Menu, Panel, text, textWidth, wrapText, type MenuItem } from '../ui/widgets';
 
 export interface HudCallbacks {
   onEndTurn: () => void;
@@ -155,7 +155,7 @@ export class HudScene extends Phaser.Scene {
       lines.push({ s: `ATK ${def.attack} DEF ${def.defense} RNG ${rng}`, c: UI.text });
     }
     if (info?.blurb) {
-      for (const line of wrap(info.blurb, 26)) lines.push({ s: line, c: UI.textDim });
+      for (const line of wrapText(info.blurb, 26)) lines.push({ s: line, c: UI.textDim });
     }
     if (info?.terrain) {
       const t = info.terrain;
@@ -307,19 +307,4 @@ export class HudScene extends Phaser.Scene {
     await tween(this, { targets: panel, x: VIEW_W, duration: 220, ease: 'Cubic.easeIn' });
     panel.destroy();
   }
-}
-
-function wrap(str: string, width: number): string[] {
-  const out: string[] = [];
-  let line = '';
-  for (const word of str.toUpperCase().split(/\s+/)) {
-    if (line && line.length + 1 + word.length > width) {
-      out.push(line);
-      line = word;
-    } else {
-      line = line ? `${line} ${word}` : word;
-    }
-  }
-  if (line) out.push(line);
-  return out;
 }

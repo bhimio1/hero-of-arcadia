@@ -19,6 +19,8 @@ export interface GameSetup {
   fog?: boolean;
   luck?: boolean;
   dayLimit?: number;
+  /** AI personality for computer-controlled players (not used by the rules). */
+  aiStyle?: 'greedy' | 'cautious' | 'reckless';
 }
 
 export function createGame(setup: GameSetup, mapOverride?: MapDef): GameState {

@@ -37,9 +37,17 @@
   ends the battle on score (army value + 100 per building). New map *First Ford*.
   The AI captures, keeps barracks clear, and buys troops scored against the enemy army.
 
+- **M6 — Menus, save/load, settings.** Title screen over a live, dithered battlefield;
+  New Game setup (map with thumbnail, player/CPU per army, fog, luck, day limit, CPU
+  style); pause menu (resume, save, load, settings, quit); four save slots including an
+  autosave kept current after every completed order, so *Continue* resumes where you left
+  off. Saves hold setup + action log + snapshot and are verified by replaying the log.
+  Settings (sound volume, zoom, animation speed, map grid, end-turn confirmation) persist
+  in localStorage and apply immediately. Tests: save round-trip, replay determinism,
+  tamper detection, corrupt/foreign/old saves rejected, slot storage.
+
 ## Next
 
-- M6 — Save/load, main menu, settings.
 - M7 — Fog of war, more units, more maps.
 - M8 — CI, GitHub Pages deploy, Tauri desktop builds.
 

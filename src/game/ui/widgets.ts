@@ -3,6 +3,7 @@
 
 import Phaser from 'phaser';
 import { FONT, FONT_SIZE } from '../config';
+import { sfx } from '../audio/sfx';
 import { pal, UI } from '../gfx/palette';
 
 export const DEPTH_UI = 1000;
@@ -198,6 +199,9 @@ export interface MenuItem {
   detail?: string;
   onSelect: () => void;
   onHover?: () => void;
+  /** Left/right arrows on this row (for option pickers). */
+  onLeft?: () => void;
+  onRight?: () => void;
 }
 
 /**
@@ -229,7 +233,8 @@ export class Menu extends Panel {
     this.arrow = scene.add.sprite(6, 6, 'ui/arrow', 'default0').setOrigin(0, 0);
     this.add(this.arrow);
     scene.tweens.add({ targets: this.arrow, alpha: { from: 1, to: 0.25 }, duration: 260, yoyo: true, repeat: -1, ease: 'Stepped' });
-    this.hitZone = scene.add.zone(0, 0, w, h).setOrigin(0, 0).setInteractive();
+    // Phaser hit-tests children with their own scroll factor, so pin the zone to the screen too
+    this.hitZone = scene.add.zone(0, 0, w, h).setOrigin(0, 0).setScrollFactor(0).setInteractive();
     this.add(this.hitZone);
     this.hitZone.on('pointermove', (p: Phaser.Input.Pointer) => {
       const i = this.rowAt(p);
@@ -281,4 +286,115 @@ export class Menu extends Panel {
   get selectedIndex(): number {
     return this.index;
   }
+
+  get selectedItem(): MenuItem | undefined {
+    return this.items[this.index];
+  }
+
+  setDetail(i: number, detail: string): void {
+    const row = this.rows[i];
+    if (!row?.detail) return;
+    row.detail.setText(detail);
+    row.detail.x = this.boxW - 8 - textWidth(detail);
+  }
+}
+
+/**
+ * Keyboard navigation for whichever menu `getMenu` returns: arrows/WASD to move,
+ * left/right for option rows, Enter/Space to confirm, Esc/Backspace for `onBack`.
+ */
+export function bindMenuKeys(scene: Phaser.Scene, getMenu: () => Menu | null, onBack?: () => void): void {
+  const kb = scene.input.keyboard!;
+  kb.addCapture('UP,DOWN,LEFT,RIGHT,SPACE,TAB');
+  const openedAt = scene.time.now;
+  const ready = () => scene.time.now - openedAt > 150 && scene.sys.isActive();
+  const nav = (d: number) => () => {
+    const m = getMenu();
+    if (!m || !ready()) return;
+    m.move(d);
+    sfx.play('cursor');
+  };
+  const side = (dir: 'onLeft' | 'onRight') => () => {
+    const item = getMenu()?.selectedItem;
+    if (!item?.[dir] || !ready()) return;
+    item[dir]!();
+    sfx.play('cursor');
+  };
+  kb.on('keydown', () => sfx.unlock());
+  kb.on('keydown-UP', nav(-1));
+  kb.on('keydown-W', nav(-1));
+  kb.on('keydown-DOWN', nav(1));
+  kb.on('keydown-S', nav(1));
+  kb.on('keydown-LEFT', side('onLeft'));
+  kb.on('keydown-A', side('onLeft'));
+  kb.on('keydown-RIGHT', side('onRight'));
+  kb.on('keydown-D', side('onRight'));
+  const confirm = () => {
+    const m = getMenu();
+    if (m && ready()) m.confirm();
+  };
+  kb.on('keydown-ENTER', confirm);
+  kb.on('keydown-SPACE', confirm);
+  if (onBack) {
+    kb.on('keydown-ESC', () => ready() && onBack());
+    kb.on('keydown-BACKSPACE', () => ready() && onBack());
+  }
+  scene.input.on('pointerdown', () => sfx.unlock());
+}
+
+/** Option row helper: a menu item that cycles through `values`. */
+export function optionItem<T>(
+  label: string,
+  values: readonly T[],
+  initial: T,
+  show: (v: T) => string,
+  onChange: (v: T) => void,
+  getMenu: () => Menu | null,
+  rowIndex: () => number,
+): MenuItem {
+  let i = Math.max(0, values.indexOf(initial));
+  const set = (d: number) => {
+    i = (i + d + values.length) % values.length;
+    getMenu()?.setDetail(rowIndex(), show(values[i]));
+    onChange(values[i]);
+  };
+  return {
+    label,
+    detail: show(values[i]),
+    onSelect: () => {
+      set(1);
+      sfx.play('cursor');
+    },
+    onLeft: () => set(-1),
+    onRight: () => set(1),
+  };
+}
+
+/** Upper-cases and word-wraps text to lines of at most `width` characters. */
+export function wrapText(str: string, width: number): string[] {
+  const out: string[] = [];
+  let line = '';
+  for (const word of str.toUpperCase().split(/\s+/)) {
+    if (!word) continue;
+    if (line && line.length + 1 + word.length > width) {
+      out.push(line);
+      line = word;
+    } else {
+      line = line ? `${line} ${word}` : word;
+    }
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+/** Centered one-line hint on a solid ink strip, readable over busy backgrounds. */
+export function hintText(scene: Phaser.Scene, y: number, str: string, color: number = UI.textDim): Phaser.GameObjects.Container {
+  const w = textWidth(str) + 8;
+  const x = Math.round((scene.scale.width - w) / 2);
+  const c = scene.add.container(x, Math.round(y)).setScrollFactor(0).setDepth(650);
+  const g = scene.add.graphics();
+  g.fillStyle(pal(UI.ink));
+  g.fillRect(0, 0, w, 12);
+  c.add([g, text(scene, 4, 2, str, color)]);
+  return c;
 }
