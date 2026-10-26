@@ -2,9 +2,9 @@
 // scene only turns input into core actions and plays back the resulting events.
 
 import Phaser from 'phaser';
-import { targetsFrom, threatTiles } from '../../core/combat';
+import { previewAttack, targetsFrom, terrainDefense, threatTiles } from '../../core/combat';
 import { getFaction, getUnitDef } from '../../core/data';
-import { dispatch, newMatch, type Match } from '../../core/match';
+import { canUndo, dispatch, newMatch, undo, type Match } from '../../core/match';
 import { computeReach, destinations, pathTo, type Reach } from '../../core/pathfinding';
 import { getUnit, terrainAt, unitAt, type GameSetup } from '../../core/state';
 import type { Action, Coord, GameEvent, Unit } from '../../core/types';
@@ -49,6 +49,7 @@ export class BattleScene extends Phaser.Scene {
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private drag: { startX: number; startY: number; scrollX: number; scrollY: number; active: boolean } | null = null;
   private inspected: number | null = null;
+  private previewTarget: Unit | null = null;
 
   constructor() {
     super('Battle');
@@ -96,8 +97,25 @@ export class BattleScene extends Phaser.Scene {
     kb.on('keydown-ESC', () => this.cancel());
     kb.on('keydown-SPACE', () => {
       if (this.mode === 'idle' && !this.hud.menuOpen) this.requestEndTurn();
+      else if (this.mode === 'targeting') this.confirmTarget();
     });
-    kb.on('keydown-TAB', () => this.selectNextUnit());
+    kb.on('keydown-ENTER', () => {
+      if (this.mode === 'targeting') this.confirmTarget();
+    });
+    kb.on('keydown-TAB', () => {
+      if (this.mode === 'targeting') this.cycleTarget(1);
+      else this.selectNextUnit();
+    });
+    kb.on('keydown-Z', (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) this.undoMove();
+    });
+    const cycle = (d: number) => () => {
+      if (this.mode === 'targeting') this.cycleTarget(d);
+    };
+    kb.on('keydown-LEFT', cycle(-1));
+    kb.on('keydown-UP', cycle(-1));
+    kb.on('keydown-RIGHT', cycle(1));
+    kb.on('keydown-DOWN', cycle(1));
 
     this.input.mouse?.disableContextMenu();
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.onPointerMove(p));
@@ -153,11 +171,15 @@ export class BattleScene extends Phaser.Scene {
       const isDest = this.selected.dests.some((d) => d.x === t.x && d.y === t.y);
       this.overlays.showPath(isDest ? (pathTo(this.selected.reach, t) ?? []) : []);
     }
+    if (this.mode === 'targeting') {
+      const target = this.currentTargets().find((u) => u.x === t.x && u.y === t.y);
+      if (target) this.setPreviewTarget(target);
+    }
     this.refreshInfo();
   }
 
   override update(_time: number, delta: number): void {
-    if (this.hud?.menuOpen) return;
+    if (this.hud?.menuOpen || this.mode === 'targeting') return;
     const k = this.keys;
     let dx = 0;
     let dy = 0;
@@ -260,11 +282,10 @@ export class BattleScene extends Phaser.Scene {
         break;
       }
       case 'targeting': {
-        const sel = this.selected!;
-        const targets = targetsFrom(this.state, sel.unit, sel.unit);
-        const target = targets.find((u) => u.x === t.x && u.y === t.y);
-        if (target) void this.orderAttack(target);
-        else this.backToMenu();
+        const target = this.currentTargets().find((u) => u.x === t.x && u.y === t.y);
+        if (!target) this.backToMenu();
+        else if (this.previewTarget?.id === target.id) void this.orderAttack(target);
+        else this.setPreviewTarget(target);
         break;
       }
       default:
@@ -322,7 +343,9 @@ export class BattleScene extends Phaser.Scene {
         sfx.play('cancel');
         break;
       case 'menu':
-        if (!this.selected!.unit.moved) {
+        if (this.selected!.unit.moved) {
+          this.undoMove();
+        } else {
           this.hud.closeMenu();
           this.select(this.selected!.unit);
           sfx.play('cancel');
@@ -374,7 +397,14 @@ export class BattleScene extends Phaser.Scene {
 
   private backToMenu(): void {
     sfx.play('cancel');
+    this.previewTarget = null;
+    this.hud.hidePreview();
     this.openActionMenu();
+  }
+
+  private currentTargets(): Unit[] {
+    const unit = this.selected?.unit;
+    return unit ? targetsFrom(this.state, unit, unit) : [];
   }
 
   private startTargeting(): void {
@@ -382,14 +412,57 @@ export class BattleScene extends Phaser.Scene {
     this.hud.closeMenu();
     this.mode = 'targeting';
     sfx.play('confirm');
-    const targets = targetsFrom(this.state, unit, unit);
+    const targets = this.currentTargets();
+    this.overlays.show('attack', threatTiles(this.state, unit, [unit]));
     this.overlays.show('target', targets.map((u) => ({ x: u.x, y: u.y })));
-    const def = getUnitDef(unit.type);
-    this.overlays.show('attack', threatTiles(this.state, unit, [unit]).filter(() => def.range[1] > 0));
+    const hovered = targets.find((u) => u.x === this.hover.x && u.y === this.hover.y);
+    this.setPreviewTarget(hovered ?? targets[0]);
+  }
+
+  private setPreviewTarget(target: Unit): void {
+    const unit = this.selected!.unit;
+    if (this.previewTarget?.id !== target.id) sfx.play('cursor');
+    this.previewTarget = target;
+    this.overlays.moveCursor(target);
+    const p = previewAttack(this.state, unit, target);
+    const side = (u: Unit, hpAfter: [number, number], deals: [number, number] | null) => ({
+      name: getUnitDef(u.type).name,
+      faction: this.state.players[u.owner].faction,
+      hp: u.hp,
+      hpAfter,
+      deals,
+      terrain: terrainAt(this.state, u.x, u.y).name,
+      terrainDef: terrainDefense(this.state, u),
+    });
+    this.hud.showPreview(side(unit, p.attackerHpAfter, p.damage), side(target, p.defenderHpAfter, p.counter));
+  }
+
+  private cycleTarget(delta: number): void {
+    const targets = this.currentTargets();
+    if (targets.length === 0) return;
+    const i = targets.findIndex((u) => u.id === this.previewTarget?.id);
+    this.setPreviewTarget(targets[(i + delta + targets.length) % targets.length]);
+  }
+
+  private confirmTarget(): void {
+    if (this.previewTarget) void this.orderAttack(this.previewTarget);
+  }
+
+  private undoMove(): void {
+    if (this.mode !== 'menu' || !this.selected || !canUndo(this.match)) return;
+    const id = this.selected.unit.id;
+    if (!undo(this.match)) return;
+    this.hud.closeMenu();
+    this.units.sync(this.state);
+    const unit = getUnit(this.state, id)!;
+    sfx.play('cancel');
+    this.select(unit);
   }
 
   private async orderAttack(target: Unit): Promise<void> {
     const unit = this.selected!.unit;
+    this.previewTarget = null;
+    this.hud.hidePreview();
     this.overlays.clear();
     this.mode = 'busy';
     sfx.play('confirm');

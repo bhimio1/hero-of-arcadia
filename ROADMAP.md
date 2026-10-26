@@ -15,9 +15,14 @@
   threat-range inspection, end-turn confirmation, Web Audio chiptune sound effects.
   Both armies are human-controlled (hot-seat) until the AI lands in M4.
 
+- **M3 — Terrain, combat preview, undo.** Terrain defense applies to every strike (forest
+  +2, hills +2, mountain +4, ford −1), counters use the attacker's new tile, a combat
+  preview window shows damage and resulting HP both ways (as a range when luck is on),
+  targets can be cycled with arrows/Tab and confirmed with Enter, and a move can be taken
+  back with Esc or Ctrl+Z until the unit acts.
+
 ## Next
 
-- M3 — Terrain effects in combat, combat preview, undo move.
 - M4 — Simple AI opponent.
 - M5 — Economy: buildings, capture, income, production.
 - M6 — Save/load, main menu, settings.

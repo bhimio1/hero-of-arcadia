@@ -141,3 +141,31 @@ describe('threat tiles', () => {
     expect(catThreat.every((c) => c.x + c.y >= 2 && c.x + c.y <= 3)).toBe(true);
   });
 });
+
+describe('terrain effects', () => {
+  it('adds terrain defense to the defender', () => {
+    // pikeman (def 2) on plains, forest (+2), mountain (+4) and ford (-1)
+    const s = makeGame(['.f^:', '....'], [
+      { type: 'catapult', owner: 0, x: 0, y: 1 },
+      { type: 'pikeman', owner: 1, x: 0, y: 0 },
+      { type: 'pikeman', owner: 1, x: 1, y: 0 },
+      { type: 'pikeman', owner: 1, x: 2, y: 0 },
+      { type: 'pikeman', owner: 1, x: 3, y: 0 },
+    ]);
+    const [cat, plains, forest, mountain, ford] = s.units;
+    expect(baseDamage(s, cat, 10, plains)).toBe(6); // 8 * 0.8 = 6.4
+    expect(baseDamage(s, cat, 10, forest)).toBe(5); // 8 * 0.6 = 4.8
+    expect(baseDamage(s, cat, 10, mountain)).toBe(3); // 8 * 0.4 = 3.2
+    expect(baseDamage(s, cat, 10, ford)).toBe(7); // 8 * 0.9 = 7.2
+  });
+
+  it("uses the attacker's tile for the counterattack", () => {
+    const s = makeGame(['^..'], [
+      { type: 'pikeman', owner: 0, x: 2, y: 0 },
+      { type: 'pikeman', owner: 1, x: 1, y: 0 },
+    ]);
+    // the defender is left with 6 HP either way; its counter is 5 * 0.6 * (1 - 0.1 * (2 + terrain))
+    expect(previewAttack(s, s.units[0], s.units[1], { x: 2, y: 0 }).counter).toEqual([2, 2]); // plains: 2.4
+    expect(previewAttack(s, s.units[0], s.units[1], { x: 0, y: 0 }).counter).toEqual([1, 1]); // mountain: 1.2
+  });
+});

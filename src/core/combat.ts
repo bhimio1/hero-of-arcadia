@@ -2,20 +2,26 @@
 // case each strike may deal up to LUCK_MAX extra damage drawn from the seeded RNG.
 
 import { getUnitDef } from './data';
+import { terrainAt } from './state';
 import { manhattan, tilesInRange, toIndex } from './grid';
 import type { Coord, GameState, Unit } from './types';
 
 export const LUCK_MAX = 1;
 
+/** Defense bonus from the tile a unit stands on. */
+export function terrainDefense(state: GameState, at: Coord): number {
+  return terrainAt(state, at.x, at.y).defense;
+}
+
 /**
- * Base damage of `attacker` (with `attackerHp`) hitting `defender`.
- *   damage = round(attack * bonusVs * hp/maxHp * (1 - 0.1 * defense))
+ * Base damage of `attacker` (with `attackerHp`) hitting `defender` where it stands.
+ *   damage = round(attack * bonusVs * hp/maxHp * (1 - 0.1 * (defense + terrainDefense)))
  */
-export function baseDamage(_state: GameState, attacker: Unit, attackerHp: number, defender: Unit): number {
+export function baseDamage(state: GameState, attacker: Unit, attackerHp: number, defender: Unit): number {
   const a = getUnitDef(attacker.type);
   const d = getUnitDef(defender.type);
   const bonus = a.bonusVs[defender.type] ?? 1;
-  const defense = d.defense;
+  const defense = d.defense + terrainDefense(state, defender);
   const factor = Math.max(0, 1 - 0.1 * defense);
   const raw = a.attack * bonus * (Math.max(0, attackerHp) / a.maxHp) * factor;
   return Math.max(0, Math.round(raw + 1e-9));

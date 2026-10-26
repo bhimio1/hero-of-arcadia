@@ -23,11 +23,14 @@ Other scripts:
 
 | Input | Action |
 | --- | --- |
-| Left click | Select a unit / choose a destination |
+| Left click | Select a unit, choose a destination, pick a menu entry or target |
+| Click an enemy | Show the tiles it can threaten this turn |
 | Drag, arrows, WASD | Pan the camera |
-| Space | End turn |
-| Tab | Select the next unit that can still act |
-| Esc, right click | Cancel |
+| Space | End turn (confirm in menus) |
+| Enter | Confirm menu entry / attack the previewed target |
+| Tab | Select the next unit that can still act (cycle targets while aiming) |
+| Esc, right click | Cancel; after moving, undo the move |
+| Ctrl+Z | Undo the last move (before the unit attacks or waits) |
 
 ## Project layout
 

@@ -15,6 +15,17 @@ export interface HudCallbacks {
   onMenu?: () => void;
 }
 
+export interface PreviewSide {
+  name: string;
+  faction: string;
+  hp: number;
+  hpAfter: [number, number];
+  /** Damage this side deals, or null if it cannot strike (no counter). */
+  deals: [number, number] | null;
+  terrain: string;
+  terrainDef: number;
+}
+
 export interface InfoData {
   terrain: TerrainDef | null;
   unit: Unit | null;
@@ -34,6 +45,7 @@ export class HudScene extends Phaser.Scene {
   private menuOpenedAt = 0;
   private dialog: Panel | null = null;
   private infoOnLeft = true;
+  private preview: Panel | null = null;
 
   constructor() {
     super('Hud');
@@ -44,6 +56,7 @@ export class HudScene extends Phaser.Scene {
     this.infoLines = [];
     this.menu = null;
     this.dialog = null;
+    this.preview = null;
   }
 
   create(): void {
@@ -226,6 +239,39 @@ export class HudScene extends Phaser.Scene {
       this.dialog = null;
       this.closeMenu();
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Combat preview
+
+  showPreview(attacker: PreviewSide, defender: PreviewSide): void {
+    this.hidePreview();
+    const w = 264;
+    const h = 52;
+    const panel = new Panel(this, Math.round((VIEW_W - w) / 2), 26, w, h);
+    panel.setDepth(1050);
+    const range = (r: [number, number]) => (r[0] === r[1] ? `${r[0]}` : `${r[0]}-${r[1]}`);
+    const side = (p: PreviewSide, x: number, right: boolean) => {
+      const put = (y: number, str: string, color: number) => {
+        const t = text(this, right ? x - textWidth(str) : x, y, str, color);
+        panel.add(t);
+      };
+      put(6, p.name.toUpperCase(), TEAM_RAMPS[p.faction][0]);
+      const after = p.hpAfter[0] === 0 && p.hpAfter[1] === 0 ? 'KO' : range(p.hpAfter);
+      put(17, `HP ${p.hp}>${after}`, p.hpAfter[0] === 0 ? UI.bad : UI.text);
+      put(28, p.deals ? `DMG ${range(p.deals)}` : 'NO COUNTER', p.deals ? UI.highlight : UI.textDim);
+      const sign = p.terrainDef >= 0 ? '+' : '';
+      put(39, `${p.terrain.toUpperCase().slice(0, 8)} ${sign}${p.terrainDef}`, 20);
+    };
+    side(attacker, 8, false);
+    side(defender, w - 8, true);
+    panel.add(text(this, Math.round(w / 2 - 8), 17, 'VS', UI.textDim));
+    this.preview = panel;
+  }
+
+  hidePreview(): void {
+    this.preview?.destroy();
+    this.preview = null;
   }
 
   // ---------------------------------------------------------------------------
