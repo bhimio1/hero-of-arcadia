@@ -8,9 +8,15 @@
   terrain autotiling (roads, bridges, shorelines), camera pan (arrows/WASD/drag), blinking
   cursor, unit selection with Dijkstra movement range and path preview, animated moves.
 
+- **M2 — Factions, turns, combat, victory.** Turn order with day counter and turn banner,
+  action menu (Attack / Wait), targeting, damage formula with per-unit bonuses and HP
+  scaling, counterattacks (ranged and siege units are safe from melee replies), unit death,
+  elimination and last-army-standing victory, game-over screen with kills/losses, enemy
+  threat-range inspection, end-turn confirmation, Web Audio chiptune sound effects.
+  Both armies are human-controlled (hot-seat) until the AI lands in M4.
+
 ## Next
 
-- M2 — Two factions, turn system, attacking, unit death, win/lose screen.
 - M3 — Terrain effects in combat, combat preview, undo move.
 - M4 — Simple AI opponent.
 - M5 — Economy: buildings, capture, income, production.

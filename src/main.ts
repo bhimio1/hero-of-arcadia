@@ -4,6 +4,7 @@ import { VIEW_H, VIEW_W } from './game/config';
 import { computeZoom, installResizeHandler } from './game/display';
 import { BattleScene } from './game/scenes/BattleScene';
 import { BootScene } from './game/scenes/BootScene';
+import { GameOverScene } from './game/scenes/GameOverScene';
 import { HudScene } from './game/scenes/HudScene';
 
 const game = new Phaser.Game({
@@ -18,7 +19,7 @@ const game = new Phaser.Game({
   scale: { mode: Phaser.Scale.NONE, zoom: computeZoom('auto') },
   disableContextMenu: true,
   banner: false,
-  scene: [BootScene, BattleScene, HudScene],
+  scene: [BootScene, BattleScene, HudScene, GameOverScene],
 });
 
 installResizeHandler(game);

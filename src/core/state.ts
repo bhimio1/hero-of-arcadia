@@ -27,6 +27,7 @@ export function createGame(setup: GameSetup, mapOverride?: MapDef): GameState {
     faction: setup.players?.[i]?.faction ?? slot.faction,
     controller: setup.players?.[i]?.controller ?? slot.controller,
     eliminated: false,
+    stats: { kills: 0, losses: 0 },
   }));
   let nextUnitId = 1;
   const units: Unit[] = map.units.map((u) => ({

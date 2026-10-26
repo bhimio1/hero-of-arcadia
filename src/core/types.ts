@@ -108,10 +108,16 @@ export interface Unit {
   acted: boolean;
 }
 
+export interface PlayerStats {
+  kills: number;
+  losses: number;
+}
+
 export interface PlayerState {
   faction: string;
   controller: Controller;
   eliminated: boolean;
+  stats: PlayerStats;
 }
 
 export interface GameOptions {
@@ -144,13 +150,18 @@ export interface GameState {
 
 export type Action =
   | { type: 'move'; unitId: number; path: Coord[] }
+  | { type: 'attack'; unitId: number; targetId: number }
   | { type: 'wait'; unitId: number }
   | { type: 'endTurn' };
 
 export type GameEvent =
   | { type: 'moved'; unitId: number; path: Coord[] }
+  | { type: 'attacked'; attackerId: number; defenderId: number; damage: number; counter: boolean; hpAfter: number }
+  | { type: 'died'; unitId: number; owner: number; x: number; y: number }
   | { type: 'waited'; unitId: number }
-  | { type: 'turnStarted'; player: number; round: number };
+  | { type: 'turnStarted'; player: number; round: number }
+  | { type: 'eliminated'; player: number }
+  | { type: 'gameOver'; winner: number | null };
 
 export type ActionResult =
   | { ok: true; state: GameState; events: GameEvent[] }
