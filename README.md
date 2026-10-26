@@ -3,6 +3,19 @@
 A retro pixel-art, turn-based tactics game for the browser. Lead the Cobalt League against
 the Ember Host across hand-made maps: move, fight, capture and build until one banner stands.
 
+## How to play
+
+- Each day, every army takes a turn. Move each unit once, then attack, capture or wait.
+- **Villages, barracks and keeps** pay gold every turn and heal your units standing on them.
+  Pikemen capture them (two turns for a healthy unit). Barracks raise new troops.
+- **Win** by capturing the enemy keep or wiping out their army. Some battles have a day
+  limit; then the best score (army value + buildings) wins.
+- **Terrain matters:** forests and hills add 2 defense, mountains 4, fords cost 1.
+  Riders are slowed by forests; catapults can't climb hills' rough ground quickly and can
+  never enter mountains.
+- **Matchups:** pikemen brace against riders, riders run down archers and catapults,
+  archers and catapults strike from range and take no counterattack from melee units.
+
 ## Run it
 
 ```sh
@@ -25,6 +38,7 @@ Other scripts:
 | --- | --- |
 | Left click | Select a unit, choose a destination, pick a menu entry or target |
 | Click an enemy | Show the tiles it can threaten this turn |
+| Click your barracks | Open the build menu |
 | Drag, arrows, WASD | Pan the camera |
 | Space | End turn (confirm in menus) |
 | Enter | Confirm menu entry / attack the previewed target |

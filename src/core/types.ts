@@ -53,6 +53,27 @@ export interface UnitDef {
   blurb: string;
 }
 
+export interface BuildingDef {
+  id: string;
+  name: string;
+  /** Character used in map files' building layer (informational). */
+  char: string;
+  /** Defense bonus for a unit standing on the building (replaces the terrain's). */
+  defense: number;
+  /** Gold paid to the owner at the start of each of their turns. */
+  income: number;
+  /** HP restored to the owner's units standing here at the start of each turn. */
+  heal: number;
+  /** Capture points needed to take the building. */
+  capturePoints: number;
+  /** Losing this building eliminates its owner. */
+  hq: boolean;
+  /** Unit types that can be built here. */
+  produces: string[];
+  moveCost: Partial<Record<MoveType, number>>;
+  blurb: string;
+}
+
 export interface FactionDef {
   id: string;
   name: string;
@@ -72,6 +93,14 @@ export interface MapUnitPlacement {
   hp?: number;
 }
 
+export interface MapBuildingPlacement {
+  type: string;
+  x: number;
+  y: number;
+  /** Owning player index, or null for neutral. */
+  owner: number | null;
+}
+
 export interface MapPlayerSlot {
   faction: string;
   controller: Controller;
@@ -86,10 +115,13 @@ export interface MapDef {
   rows: string[];
   players: MapPlayerSlot[];
   units: MapUnitPlacement[];
+  buildings?: MapBuildingPlacement[];
   /** Gold each player starts with. */
   startingGold?: number;
   /** Suggested fog setting for this map. */
   fog?: boolean;
+  /** Suggested day limit for this map (0 or missing = none). */
+  dayLimit?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,21 +140,36 @@ export interface Unit {
   acted: boolean;
 }
 
+export interface Building {
+  id: number;
+  type: string;
+  x: number;
+  y: number;
+  owner: number | null;
+  /** In-progress capture by a unit standing on the building. */
+  capture: { unitId: number; points: number } | null;
+}
+
 export interface PlayerStats {
   kills: number;
   losses: number;
+  built: number;
+  captured: number;
 }
 
 export interface PlayerState {
   faction: string;
   controller: Controller;
   eliminated: boolean;
+  gold: number;
   stats: PlayerStats;
 }
 
 export interface GameOptions {
   fog: boolean;
   luck: boolean;
+  /** Last day of the battle (0 = no limit). When it ends, the highest score wins. */
+  dayLimit: number;
 }
 
 export interface GameState {
@@ -133,6 +180,7 @@ export interface GameState {
   /** Row-major terrain ids, length width * height. */
   terrain: string[];
   units: Unit[];
+  buildings: Building[];
   players: PlayerState[];
   currentPlayer: number;
   /** Round counter ("day"), starts at 1 and increments when play wraps to player 0. */
@@ -151,6 +199,8 @@ export interface GameState {
 export type Action =
   | { type: 'move'; unitId: number; path: Coord[] }
   | { type: 'attack'; unitId: number; targetId: number }
+  | { type: 'capture'; unitId: number }
+  | { type: 'build'; buildingId: number; unitType: string }
   | { type: 'wait'; unitId: number }
   | { type: 'endTurn' };
 
@@ -159,7 +209,11 @@ export type GameEvent =
   | { type: 'attacked'; attackerId: number; defenderId: number; damage: number; counter: boolean; hpAfter: number }
   | { type: 'died'; unitId: number; owner: number; x: number; y: number }
   | { type: 'waited'; unitId: number }
-  | { type: 'turnStarted'; player: number; round: number }
+  | { type: 'captureProgress'; buildingId: number; unitId: number; points: number; required: number }
+  | { type: 'captured'; buildingId: number; unitId: number; owner: number; previous: number | null }
+  | { type: 'built'; buildingId: number; unitId: number; unitType: string }
+  | { type: 'turnStarted'; player: number; round: number; income: number }
+  | { type: 'healed'; unitId: number; amount: number }
   | { type: 'eliminated'; player: number }
   | { type: 'gameOver'; winner: number | null };
 

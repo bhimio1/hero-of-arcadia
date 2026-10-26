@@ -2,8 +2,8 @@
 // dialogs and banners. It runs as its own scene so its camera never scrolls with the map.
 
 import Phaser from 'phaser';
-import { getUnitDef } from '../../core/data';
-import type { TerrainDef, Unit } from '../../core/types';
+import { getBuildingDef, getUnitDef } from '../../core/data';
+import type { Building, TerrainDef, Unit } from '../../core/types';
 import { FONT_SIZE, VIEW_H, VIEW_W } from '../config';
 import { sfx } from '../audio/sfx';
 import { pal, TEAM_RAMPS, UI } from '../gfx/palette';
@@ -30,12 +30,17 @@ export interface InfoData {
   terrain: TerrainDef | null;
   unit: Unit | null;
   faction?: string;
+  building?: Building | null;
+  buildingFaction?: string;
+  /** Flavour text shown under the stats (e.g. in the build menu). */
+  blurb?: string;
 }
 
 export class HudScene extends Phaser.Scene {
   private turnPanel!: Panel;
   private turnDay!: Phaser.GameObjects.BitmapText;
   private turnName!: Phaser.GameObjects.BitmapText;
+  private turnGold!: Phaser.GameObjects.BitmapText;
   private infoPanel!: Panel;
   private infoLines: Phaser.GameObjects.BitmapText[] = [];
   private endTurnBtn!: Button;
@@ -63,10 +68,11 @@ export class HudScene extends Phaser.Scene {
     this.turnPanel = new Panel(this, 4, 4, 136, 18);
     this.turnDay = text(this, 7, 6, '');
     this.turnName = text(this, 7, 6, '');
-    this.turnPanel.add([this.turnDay, this.turnName]);
+    this.turnGold = text(this, 7, 6, '', UI.highlight);
+    this.turnPanel.add([this.turnDay, this.turnName, this.turnGold]);
 
     this.infoPanel = new Panel(this, 4, VIEW_H - 40, 152, 36);
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 7; i++) {
       const t = text(this, 6, 5 + i * 10, '');
       this.infoLines.push(t);
       this.infoPanel.add(t);
@@ -122,21 +128,17 @@ export class HudScene extends Phaser.Scene {
     return !!this.menu || !!this.dialog;
   }
 
-  setTurn(round: number, factionName: string, faction: string, gold?: number): void {
-    this.turnDay.setText(`DAY ${round}`);
+  setTurn(day: string, factionName: string, faction: string, gold?: number): void {
+    this.turnDay.setText(day);
     this.turnName.setText(factionName.toUpperCase());
-    this.turnName.x = this.turnDay.x + textWidth(this.turnDay.text) + FONT_SIZE;
+    this.turnName.x = this.turnDay.x + textWidth(day) + FONT_SIZE;
     this.turnName.setTint(pal(TEAM_RAMPS[faction][0]));
-    const goldStr = gold !== undefined ? `  G${gold}` : '';
-    this.turnDay.setData('gold', goldStr);
-    let width = textWidth(`DAY ${round} ${factionName}`) + 14;
-    if (goldStr) {
-      const g = this.turnPanel.getByName('gold') as Phaser.GameObjects.BitmapText | null;
-      const gt = g ?? text(this, 0, 6, '', UI.highlight).setName('gold');
-      if (!g) this.turnPanel.add(gt);
-      gt.setText(goldStr.trim());
-      gt.x = width - 2;
-      width += textWidth(gt.text) + 8;
+    let width = this.turnName.x + textWidth(this.turnName.text) + 7;
+    this.turnGold.setVisible(gold !== undefined);
+    if (gold !== undefined) {
+      this.turnGold.setText(`${gold}G`);
+      this.turnGold.x = width + 4;
+      width += textWidth(this.turnGold.text) + 4;
     }
     this.turnPanel.resize(width, 18);
   }
@@ -152,10 +154,21 @@ export class HudScene extends Phaser.Scene {
       const rng = def.range[0] === def.range[1] ? `${def.range[0]}` : `${def.range[0]}-${def.range[1]}`;
       lines.push({ s: `ATK ${def.attack} DEF ${def.defense} RNG ${rng}`, c: UI.text });
     }
+    if (info?.blurb) {
+      for (const line of wrap(info.blurb, 26)) lines.push({ s: line, c: UI.textDim });
+    }
     if (info?.terrain) {
       const t = info.terrain;
       const sign = t.defense >= 0 ? '+' : '';
       lines.push({ s: `${t.name.toUpperCase()} DEF${sign}${t.defense}`, c: 20 });
+    }
+    if (info?.building) {
+      const b = info.building;
+      const def = getBuildingDef(b.type);
+      const owner = info.buildingFaction ? info.buildingFaction.toUpperCase() : 'NEUTRAL';
+      const color = info.buildingFaction ? TEAM_RAMPS[info.buildingFaction][0] : UI.textDim;
+      const cap = b.capture ? ` CAP ${b.capture.points}/${def.capturePoints}` : '';
+      lines.push({ s: `${owner} +${def.income}G${cap}`, c: color });
     }
     this.infoLines.forEach((t, i) => {
       t.setText(lines[i]?.s ?? '');
@@ -294,4 +307,19 @@ export class HudScene extends Phaser.Scene {
     await tween(this, { targets: panel, x: VIEW_W, duration: 220, ease: 'Cubic.easeIn' });
     panel.destroy();
   }
+}
+
+function wrap(str: string, width: number): string[] {
+  const out: string[] = [];
+  let line = '';
+  for (const word of str.toUpperCase().split(/\s+/)) {
+    if (line && line.length + 1 + word.length > width) {
+      out.push(line);
+      line = word;
+    } else {
+      line = line ? `${line} ${word}` : word;
+    }
+  }
+  if (line) out.push(line);
+  return out;
 }

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "keep", "name": "Keep", "char": "K",
+    "defense": 4, "income": 100, "heal": 2, "capturePoints": 4, "hq": true,
+    "produces": [],
+    "moveCost": { "foot": 1, "mounted": 1, "wheeled": 1 },
+    "blurb": "Your seat of power. Lose it and the war is lost."
+  },
+  {
+    "id": "barracks", "name": "Barracks", "char": "B",
+    "defense": 2, "income": 50, "heal": 2, "capturePoints": 4, "hq": false,
+    "produces": ["pikeman", "archer", "rider", "catapult"],
+    "moveCost": { "foot": 1, "mounted": 1, "wheeled": 1 },
+    "blurb": "Raises new troops. One per turn, if the yard is clear."
+  },
+  {
+    "id": "village", "name": "Village", "char": "V",
+    "defense": 2, "income": 50, "heal": 2, "capturePoints": 4, "hq": false,
+    "produces": [],
+    "moveCost": { "foot": 1, "mounted": 1, "wheeled": 1 },
+    "blurb": "Pays taxes to whoever holds it and tends wounded troops."
+  }
+]

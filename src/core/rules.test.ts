@@ -66,6 +66,6 @@ describe('end turn', () => {
     const r = applyOrThrow(s, { type: 'endTurn' });
     expect(r.state.currentPlayer).toBe(0);
     expect(r.state.round).toBe(2);
-    expect(r.events).toContainEqual({ type: 'turnStarted', player: 0, round: 2 });
+    expect(r.events).toContainEqual({ type: 'turnStarted', player: 0, round: 2, income: 0 });
   });
 });

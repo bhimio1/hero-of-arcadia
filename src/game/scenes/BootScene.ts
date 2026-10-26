@@ -13,6 +13,6 @@ export class BootScene extends Phaser.Scene {
     bakeFont(this);
     bakeAllSprites(this);
     bakeSolid(this);
-    this.scene.start('Battle', { setup: { mapId: 'greenvale', seed: Date.now() } });
+    this.scene.start('Battle', { setup: { mapId: 'first-ford', seed: Date.now() } });
   }
 }

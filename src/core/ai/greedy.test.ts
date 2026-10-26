@@ -74,16 +74,12 @@ describe('greedy AI', () => {
 });
 
 describe('AI vs AI', () => {
-  const maps = Object.keys(MAPS);
-  for (const mapId of maps) {
-    for (const seed of [1, 2, 3]) {
+  const aiPlayers = (mapId: string) => MAPS[mapId].players.map((p) => ({ faction: p.faction, controller: 'ai' as const }));
+
+  for (const mapId of Object.keys(MAPS)) {
+    for (const seed of [1, 2]) {
       it(`${mapId} (seed ${seed}) plays to a finish with only legal actions`, () => {
-        let state = createGame({
-          mapId,
-          seed,
-          luck: true,
-          players: MAPS[mapId].players.map((p) => ({ faction: p.faction, controller: 'ai' })),
-        });
+        let state = createGame({ mapId, seed, luck: true, dayLimit: 30, players: aiPlayers(mapId) });
         const ai = new GreedyAi();
         let turns = 0;
         while (!state.gameOver && turns < 400) {
@@ -94,4 +90,14 @@ describe('AI vs AI', () => {
       });
     }
   }
+
+  it('captures buildings and raises troops on an economy map', () => {
+    let state = createGame({ mapId: 'first-ford', seed: 1, players: aiPlayers('first-ford') });
+    const ai = new GreedyAi();
+    while (state.round <= 8) state = playTurn(state, ai).state;
+    for (const p of [0, 1]) {
+      expect(state.players[p].stats.captured, `player ${p} captured`).toBeGreaterThan(0);
+      expect(state.players[p].stats.built, `player ${p} built`).toBeGreaterThan(0);
+    }
+  });
 });

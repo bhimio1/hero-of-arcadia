@@ -43,7 +43,7 @@ export class GameOverScene extends Phaser.Scene {
     }
     sfx.play(viewer === null || won ? 'victory' : 'defeat');
 
-    const w = 300;
+    const w = 280;
     const rows = state.players.length;
     const h = 92 + rows * 11;
     const panel = new Panel(this, (VIEW_W - w) / 2, (VIEW_H - h) / 2 - 10, w, h);
@@ -53,13 +53,12 @@ export class GameOverScene extends Phaser.Scene {
     const after = `AFTER ${state.round} DAY${state.round === 1 ? '' : 'S'}`;
     panel.add(text(this, Math.round((w - textWidth(after)) / 2), 34, after, UI.textDim));
 
-    const header = 'ARMY          KILLS  LOST';
+    const header = 'ARMY    KILLS LOST BUILT TAKEN';
     panel.add(text(this, 18, 52, header, UI.textDim));
     state.players.forEach((p, i) => {
-      const name = getFaction(p.faction).short.toUpperCase().padEnd(14, ' ');
-      const kills = String(p.stats.kills).padStart(5, ' ');
-      const lost = String(p.stats.losses).padStart(6, ' ');
-      panel.add(text(this, 18, 64 + i * 11, `${name}${kills}${lost}`, TEAM_RAMPS[p.faction][0]));
+      const name = getFaction(p.faction).short.toUpperCase().padEnd(8, ' ');
+      const cols = [p.stats.kills, p.stats.losses, p.stats.built, p.stats.captured].map((v, j) => String(v).padStart([5, 5, 6, 6][j], ' '));
+      panel.add(text(this, 18, 64 + i * 11, `${name}${cols.join('')}`, TEAM_RAMPS[p.faction][0]));
     });
 
     const by = panel.y + h - 24;

@@ -27,6 +27,13 @@ export function baseDamage(state: GameState, attacker: Unit, attackerHp: number,
   return Math.max(0, Math.round(raw + 1e-9));
 }
 
+/** Damage a full-health `attacker` type deals to a `defender` type on open ground. */
+export function rawDamage(attackerType: string, defenderType: string): number {
+  const a = getUnitDef(attackerType);
+  const d = getUnitDef(defenderType);
+  return a.attack * (a.bonusVs[defenderType] ?? 1) * Math.max(0, 1 - 0.1 * d.defense);
+}
+
 export function inAttackRange(unit: Unit, from: Coord, target: Coord): boolean {
   const [min, max] = getUnitDef(unit.type).range;
   const d = manhattan(from, target);

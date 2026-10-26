@@ -1,7 +1,7 @@
-import { getMap, getTerrain, getUnitDef, parseMapTerrain } from './data';
+import { getBuildingDef, getMap, getTerrain, getUnitDef, parseMapTerrain } from './data';
 import { hashSeed } from './rng';
 import { inBounds, toIndex } from './grid';
-import type { Controller, Coord, GameState, MapDef, TerrainDef, Unit, UnitDef } from './types';
+import type { Building, BuildingDef, Controller, Coord, GameState, MapDef, TerrainDef, Unit, UnitDef } from './types';
 
 export const STATE_VERSION = 1;
 
@@ -18,6 +18,7 @@ export interface GameSetup {
   players?: PlayerSetup[];
   fog?: boolean;
   luck?: boolean;
+  dayLimit?: number;
 }
 
 export function createGame(setup: GameSetup, mapOverride?: MapDef): GameState {
@@ -27,7 +28,8 @@ export function createGame(setup: GameSetup, mapOverride?: MapDef): GameState {
     faction: setup.players?.[i]?.faction ?? slot.faction,
     controller: setup.players?.[i]?.controller ?? slot.controller,
     eliminated: false,
-    stats: { kills: 0, losses: 0 },
+    gold: map.startingGold ?? 0,
+    stats: { kills: 0, losses: 0, built: 0, captured: 0 },
   }));
   let nextUnitId = 1;
   const units: Unit[] = map.units.map((u) => ({
@@ -40,22 +42,53 @@ export function createGame(setup: GameSetup, mapOverride?: MapDef): GameState {
     moved: false,
     acted: false,
   }));
-  return {
+  const buildings: Building[] = (map.buildings ?? []).map((b, i) => ({
+    id: i + 1,
+    type: b.type,
+    x: b.x,
+    y: b.y,
+    owner: b.owner,
+    capture: null,
+  }));
+  const state: GameState = {
     version: STATE_VERSION,
     mapId: map.id,
     width,
     height,
     terrain,
     units,
+    buildings,
     players,
     currentPlayer: 0,
     round: 1,
     nextUnitId,
     rng: hashSeed(setup.seed),
-    options: { fog: setup.fog ?? map.fog ?? false, luck: setup.luck ?? false },
+    options: { fog: setup.fog ?? map.fog ?? false, luck: setup.luck ?? false, dayLimit: setup.dayLimit ?? map.dayLimit ?? 0 },
     winner: null,
     gameOver: false,
   };
+  // the first player collects income for their opening turn like everyone else will
+  state.players[0].gold += incomeOf(state, 0);
+  return state;
+}
+
+/** Battle score used when the day limit runs out: army value plus 100 per building held. */
+export function scoreOf(state: GameState, player: number): number {
+  let score = 0;
+  for (const u of state.units) {
+    if (u.owner !== player) continue;
+    const def = getUnitDef(u.type);
+    score += (def.cost * u.hp) / def.maxHp;
+  }
+  for (const b of state.buildings) if (b.owner === player) score += 100;
+  return Math.round(score);
+}
+
+/** Gold a player collects at the start of their turn. */
+export function incomeOf(state: GameState, player: number): number {
+  let total = 0;
+  for (const b of state.buildings) if (b.owner === player) total += getBuildingDef(b.type).income;
+  return total;
 }
 
 export function cloneState(state: GameState): GameState {
@@ -70,7 +103,43 @@ export function unitAt(state: GameState, x: number, y: number): Unit | undefined
   return state.units.find((u) => u.x === x && u.y === y);
 }
 
+const buildingIndex = new WeakMap<Building[], Map<number, Building>>();
+
+/** The building on a tile, if any. Building positions never change during a game. */
+export function buildingAt(state: GameState, x: number, y: number): Building | undefined {
+  let index = buildingIndex.get(state.buildings);
+  if (!index) {
+    index = new Map(state.buildings.map((b) => [toIndex(state.width, b.x, b.y), b]));
+    buildingIndex.set(state.buildings, index);
+  }
+  return index.get(toIndex(state.width, x, y));
+}
+
+export function getBuilding(state: GameState, id: number): Building | undefined {
+  return state.buildings.find((b) => b.id === id);
+}
+
+const buildingTerrain = new Map<string, TerrainDef>();
+
+/** Buildings act as terrain for movement and defense. */
+function buildingAsTerrain(def: BuildingDef): TerrainDef {
+  let t = buildingTerrain.get(def.id);
+  if (!t) {
+    t = { id: def.id, name: def.name, char: def.char, defense: def.defense, moveCost: def.moveCost, sprite: 'plains' };
+    buildingTerrain.set(def.id, t);
+  }
+  return t;
+}
+
+/** Effective terrain of a tile: the building on it if there is one, else the ground. */
 export function terrainAt(state: GameState, x: number, y: number): TerrainDef {
+  const b = state.buildings.length > 0 ? buildingAt(state, x, y) : undefined;
+  if (b) return buildingAsTerrain(getBuildingDef(b.type));
+  return getTerrain(state.terrain[toIndex(state.width, x, y)]);
+}
+
+/** The ground terrain under a tile, ignoring buildings (for rendering). */
+export function groundAt(state: GameState, x: number, y: number): TerrainDef {
   return getTerrain(state.terrain[toIndex(state.width, x, y)]);
 }
 

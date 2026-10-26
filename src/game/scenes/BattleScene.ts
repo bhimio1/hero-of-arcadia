@@ -4,15 +4,16 @@
 import Phaser from 'phaser';
 import { createAi, type AiController } from '../../core/ai';
 import { previewAttack, targetsFrom, terrainDefense, threatTiles } from '../../core/combat';
-import { getFaction, getUnitDef } from '../../core/data';
+import { getBuildingDef, getFaction, getUnitDef } from '../../core/data';
 import { canUndo, dispatch, newMatch, undo, type Match } from '../../core/match';
 import { computeReach, destinations, pathTo, type Reach } from '../../core/pathfinding';
-import { getUnit, terrainAt, unitAt, type GameSetup } from '../../core/state';
-import type { Action, Coord, GameEvent, Unit } from '../../core/types';
+import { buildingAt, getBuilding, getUnit, terrainAt, unitAt, type GameSetup } from '../../core/state';
+import type { Action, Building, Coord, GameEvent, Unit } from '../../core/types';
 import { TILE, VIEW_H, VIEW_W } from '../config';
 import { sfx } from '../audio/sfx';
 import { bakeDither } from '../gfx/bake';
 import { pal, PALETTE_RGB, UI } from '../gfx/palette';
+import { BuildingLayer } from '../render/BuildingLayer';
 import { MapView } from '../render/MapView';
 import { Overlays } from '../render/Overlays';
 import { tween, UnitLayer, wait } from '../render/UnitLayer';
@@ -42,6 +43,7 @@ export class BattleScene extends Phaser.Scene {
   private initData!: BattleInit;
   private mapView!: MapView;
   private units!: UnitLayer;
+  private buildings!: BuildingLayer;
   private overlays!: Overlays;
   private hud!: HudScene;
   private mode: Mode = 'idle';
@@ -51,6 +53,8 @@ export class BattleScene extends Phaser.Scene {
   private drag: { startX: number; startY: number; scrollX: number; scrollY: number; active: boolean } | null = null;
   private inspected: number | null = null;
   private previewTarget: Unit | null = null;
+  private buildMenuOpen = false;
+  private lastIncome = 0;
   private ais = new Map<number, AiController>();
   /** Delay between AI actions in ms (scaled by the animation speed setting). */
   private aiPause = 220;
@@ -76,8 +80,11 @@ export class BattleScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(pal(1));
     bakeDither(this, 'dither-shade', PALETTE_RGB[1]);
     this.mapView = new MapView(this, state);
-    this.units = new UnitLayer(this, (owner) => this.match.state.players[owner].faction);
+    const teamOf = (owner: number) => this.match.state.players[owner].faction;
+    this.buildings = new BuildingLayer(this, teamOf);
+    this.units = new UnitLayer(this, teamOf);
     this.overlays = new Overlays(this);
+    this.buildings.sync(state);
     this.units.sync(state);
 
     this.scene.launch('Hud', { callbacks: { onEndTurn: () => this.requestEndTurn() } });
@@ -263,15 +270,19 @@ export class BattleScene extends Phaser.Scene {
     if (!this.inside(t)) return;
     const unit = unitAt(this.state, t.x, t.y);
     switch (this.mode) {
-      case 'idle':
+      case 'idle': {
+        const b = buildingAt(this.state, t.x, t.y);
         if (unit && this.isReady(unit)) {
           this.select(unit);
         } else if (unit && unit.owner !== this.state.currentPlayer) {
           this.toggleInspect(unit);
+        } else if (!unit && b && b.owner === this.state.currentPlayer && getBuildingDef(b.type).produces.length > 0) {
+          this.openBuildMenu(b);
         } else {
           this.clearInspect();
         }
         break;
+      }
       case 'selected': {
         const sel = this.selected!;
         if (unit && unit.id === sel.unit.id) {
@@ -351,7 +362,14 @@ export class BattleScene extends Phaser.Scene {
         sfx.play('cancel');
         break;
       case 'menu':
-        if (this.selected!.unit.moved) {
+        if (this.buildMenuOpen || !this.selected) {
+          this.buildMenuOpen = false;
+          this.hud.closeMenu();
+          this.mode = 'idle';
+          sfx.play('cancel');
+          break;
+        }
+        if (this.selected.unit.moved) {
           this.undoMove();
         } else {
           this.hud.closeMenu();
@@ -396,6 +414,12 @@ export class BattleScene extends Phaser.Scene {
     const items: MenuItem[] = [];
     if (targets.length > 0 && canFire) {
       items.push({ label: 'ATTACK', onSelect: () => this.startTargeting() });
+    }
+    const b = buildingAt(this.state, unit.x, unit.y);
+    if (def.canCapture && b && b.owner !== unit.owner) {
+      const required = getBuildingDef(b.type).capturePoints;
+      const done = b.capture?.unitId === unit.id ? b.capture.points : 0;
+      items.push({ label: 'CAPTURE', detail: `${done}/${required}`, onSelect: () => void this.orderCapture() });
     }
     items.push({ label: 'WAIT', onSelect: () => void this.orderWait() });
     const s = this.screenOf(unit);
@@ -482,6 +506,63 @@ export class BattleScene extends Phaser.Scene {
     this.afterOrder();
   }
 
+  private async orderCapture(): Promise<void> {
+    const unit = this.selected!.unit;
+    this.hud.closeMenu();
+    this.mode = 'busy';
+    sfx.play('confirm');
+    await this.perform({ type: 'capture', unitId: unit.id });
+    this.afterOrder();
+  }
+
+  private openBuildMenu(b: Building): void {
+    this.clearInspect();
+    const def = getBuildingDef(b.type);
+    const gold = this.state.players[this.state.currentPlayer].gold;
+    sfx.play('select');
+    this.mode = 'menu';
+    this.overlays.moveCursor(b);
+    const close = () => {
+      this.buildMenuOpen = false;
+      this.hud.closeMenu();
+      this.mode = 'idle';
+      this.refreshInfo();
+    };
+    const items: MenuItem[] = def.produces.map((type) => {
+      const u = getUnitDef(type);
+      return {
+        label: u.name.toUpperCase(),
+        detail: `${u.cost}G`,
+        enabled: u.cost <= gold,
+        onHover: () => this.hud.setInfo({ terrain: null, unit: this.previewUnit(type, b), faction: this.state.players[this.state.currentPlayer].faction, blurb: u.blurb }),
+        onSelect: () => {
+          close();
+          void this.orderBuild(b, type);
+        },
+      };
+    });
+    items.push({ label: 'CANCEL', onSelect: () => {
+      sfx.play('cancel');
+      close();
+    } });
+    const s = this.screenOf(b);
+    this.hud.openMenu(items, s.x + TILE + 4, s.y - 20, 140);
+    this.buildMenuOpen = true;
+  }
+
+  /** A stand-in unit used to show stats in the info panel while browsing the build menu. */
+  private previewUnit(type: string, at: Coord): Unit {
+    return { id: -1, type, owner: this.state.currentPlayer, x: at.x, y: at.y, hp: getUnitDef(type).maxHp, moved: false, acted: false };
+  }
+
+  private async orderBuild(b: Building, type: string): Promise<void> {
+    this.buildMenuOpen = false;
+    this.mode = 'busy';
+    await this.perform({ type: 'build', buildingId: b.id, unitType: type });
+    this.mode = 'idle';
+    this.refreshInfo();
+  }
+
   private async orderWait(): Promise<void> {
     const unit = this.selected!.unit;
     this.hud.closeMenu();
@@ -545,7 +626,9 @@ export class BattleScene extends Phaser.Scene {
     const first = this.firstReadyUnit();
     if (first) void this.ensureVisible(first);
     sfx.play('turnStart');
-    await this.hud.banner(`DAY ${this.state.round}`, p.faction, getFaction(p.faction).name.toUpperCase());
+    const income = this.lastIncome;
+    const sub = `${getFaction(p.faction).name.toUpperCase()}${income > 0 ? `   +${income}G` : ''}`;
+    await this.hud.banner(this.dayLabel(), p.faction, sub);
     const ai = this.ais.get(this.state.currentPlayer);
     if (ai) {
       // run the AI after this event chain has finished animating
@@ -620,6 +703,7 @@ export class BattleScene extends Phaser.Scene {
     this.hud.setButtonsEnabled(false);
     for (const ev of res.events) await this.animate(ev);
     this.units.sync(this.state);
+    this.buildings.sync(this.state);
     this.hud.setButtonsEnabled(!this.ais.has(this.state.currentPlayer));
     this.refreshHud();
     return true;
@@ -646,7 +730,44 @@ export class BattleScene extends Phaser.Scene {
         sfx.play('death');
         await this.units.die(ev.unitId);
         break;
+      case 'captureProgress': {
+        const b = getBuilding(this.state, ev.buildingId);
+        if (b) {
+          sfx.play('select');
+          this.buildings.sync(this.state);
+          await this.popup(b, `${ev.points}/${ev.required}`, UI.highlight);
+        }
+        break;
+      }
+      case 'captured': {
+        const b = getBuilding(this.state, ev.buildingId);
+        if (b) {
+          sfx.play('capture');
+          this.buildings.sync(this.state);
+          this.buildings.flash(b.id);
+          await this.popup(b, 'TAKEN!', UI.highlight);
+        }
+        break;
+      }
+      case 'built': {
+        sfx.play('build');
+        this.units.sync(this.state);
+        const u = getUnit(this.state, ev.unitId);
+        if (u) void this.popup(u, 'NEW', UI.good);
+        await wait(this, 250);
+        break;
+      }
+      case 'healed': {
+        const u = getUnit(this.state, ev.unitId);
+        if (u) void this.popup(u, `+${ev.amount}`, UI.good);
+        break;
+      }
+      case 'eliminated':
+        this.units.sync(this.state);
+        this.buildings.sync(this.state);
+        break;
       case 'turnStarted':
+        this.lastIncome = ev.income;
         await this.beginTurn();
         break;
       case 'gameOver':
@@ -694,20 +815,29 @@ export class BattleScene extends Phaser.Scene {
     return this.state.units.find((u) => this.isReady(u));
   }
 
+  private dayLabel(): string {
+    const limit = this.state.options.dayLimit;
+    return limit > 0 ? `DAY ${this.state.round}/${limit}` : `DAY ${this.state.round}`;
+  }
+
   private refreshHud(): void {
     if (!this.hud?.sys.isActive()) return;
     const p = this.state.players[this.state.currentPlayer];
-    this.hud.setTurn(this.state.round, getFaction(p.faction).name, p.faction);
+    const hasEconomy = this.state.buildings.length > 0;
+    this.hud.setTurn(this.dayLabel(), getFaction(p.faction).name, p.faction, hasEconomy ? p.gold : undefined);
     this.refreshInfo();
   }
 
   private refreshInfo(): void {
-    if (!this.hud?.sys.isActive() || !this.inside(this.hover)) return;
+    if (!this.hud?.sys.isActive() || !this.inside(this.hover) || this.buildMenuOpen) return;
     const unit = unitAt(this.state, this.hover.x, this.hover.y) ?? null;
+    const b = buildingAt(this.state, this.hover.x, this.hover.y) ?? null;
     this.hud.setInfo({
       terrain: terrainAt(this.state, this.hover.x, this.hover.y),
       unit,
       faction: unit ? this.state.players[unit.owner].faction : undefined,
+      building: b,
+      buildingFaction: b && b.owner !== null ? this.state.players[b.owner].faction : undefined,
     });
   }
 }

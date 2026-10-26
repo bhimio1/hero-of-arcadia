@@ -4,8 +4,9 @@
 import terrainJson from '../data/terrain.json';
 import unitsJson from '../data/units.json';
 import factionsJson from '../data/factions.json';
+import buildingsJson from '../data/buildings.json';
 import { MAP_LIST } from '../data/maps';
-import { MOVE_TYPES, type FactionDef, type MapDef, type TerrainDef, type UnitDef } from './types';
+import { MOVE_TYPES, type BuildingDef, type FactionDef, type MapDef, type TerrainDef, type UnitDef } from './types';
 
 export class DataError extends Error {}
 
@@ -26,6 +27,7 @@ function indexById<T extends { id: string }>(list: T[], kind: string): Record<st
 export const TERRAIN: Record<string, TerrainDef> = indexById(terrainJson as TerrainDef[], 'terrain');
 export const UNITS: Record<string, UnitDef> = indexById(unitsJson as UnitDef[], 'unit');
 export const FACTIONS: Record<string, FactionDef> = indexById(factionsJson as FactionDef[], 'faction');
+export const BUILDINGS: Record<string, BuildingDef> = indexById(buildingsJson as BuildingDef[], 'building');
 export const MAPS: Record<string, MapDef> = indexById(MAP_LIST, 'map');
 
 export const UNIT_IDS = Object.keys(UNITS);
@@ -48,6 +50,17 @@ for (const u of Object.values(UNITS)) {
   for (const target of Object.keys(u.bonusVs)) {
     assert(target in UNITS, `unit ${u.id}: bonusVs unknown unit ${target}`);
   }
+}
+
+for (const b of Object.values(BUILDINGS)) {
+  for (const p of b.produces) assert(p in UNITS, `building ${b.id}: produces unknown unit ${p}`);
+  assert(b.capturePoints > 0, `building ${b.id}: capturePoints must be positive`);
+}
+
+export function getBuildingDef(id: string): BuildingDef {
+  const b = BUILDINGS[id];
+  if (!b) throw new DataError(`unknown building "${id}"`);
+  return b;
 }
 
 export function getTerrain(id: string): TerrainDef {
@@ -109,6 +122,17 @@ export function validateMap(map: MapDef): void {
   }
   for (let p = 0; p < map.players.length; p++) {
     assert(map.units.some((u) => u.owner === p), `map ${map.id}: player ${p} has no starting units`);
+  }
+  const bseen = new Set<number>();
+  for (const b of map.buildings ?? []) {
+    assert(b.type in BUILDINGS, `map ${map.id}: unknown building ${b.type}`);
+    assert(b.x >= 0 && b.y >= 0 && b.x < width && b.y < height, `map ${map.id}: building out of bounds`);
+    const idx = b.y * width + b.x;
+    assert(!bseen.has(idx), `map ${map.id}: two buildings at ${b.x},${b.y}`);
+    bseen.add(idx);
+    const t = getTerrain(terrain[idx]);
+    assert(t.moveCost.foot !== undefined && t.autotile !== 'water' && t.autotile !== 'bridge', `map ${map.id}: building on ${t.id} at ${b.x},${b.y}`);
+    assert(b.owner === null || (b.owner >= 0 && b.owner < map.players.length), `map ${map.id}: bad building owner`);
   }
 }
 

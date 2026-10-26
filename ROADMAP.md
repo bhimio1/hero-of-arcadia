@@ -29,9 +29,16 @@
   move-and-fire rules, and AI-vs-AI games that must finish with only legal actions, plus
   a random-play fuzz test for state invariants.
 
+- **M5 — Economy.** Keeps, barracks and villages (data-driven in `buildings.json`):
+  they act as terrain (defense, movement), pay income each turn, heal units +2 HP, and can
+  be captured (4 points; healthy units add 2 per turn, badly wounded ones 1; walking away
+  resets progress). Barracks raise one unit per turn. Capturing an enemy keep eliminates
+  that army; an army with no units and nowhere to recruit is routed. Optional day limit
+  ends the battle on score (army value + 100 per building). New map *First Ford*.
+  The AI captures, keeps barracks clear, and buys troops scored against the enemy army.
+
 ## Next
 
-- M5 — Economy: buildings, capture, income, production.
 - M6 — Save/load, main menu, settings.
 - M7 — Fog of war, more units, more maps.
 - M8 — CI, GitHub Pages deploy, Tauri desktop builds.

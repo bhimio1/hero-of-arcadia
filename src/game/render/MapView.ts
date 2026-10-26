@@ -20,10 +20,17 @@ function hash(x: number, y: number): number {
 
 export class MapView {
   readonly layer: Phaser.GameObjects.Container;
+  private buildingTiles: Set<number>;
 
   constructor(private scene: Phaser.Scene, private state: GameState) {
     this.layer = scene.add.container(0, 0).setDepth(0);
+    this.buildingTiles = new Set(state.buildings.map((b) => b.y * state.width + b.x));
     this.build();
+  }
+
+  private hasBuilding(x: number, y: number): boolean {
+    const s = this.state;
+    return x >= 0 && y >= 0 && x < s.width && y < s.height && this.buildingTiles.has(y * s.width + x);
   }
 
   private terrainId(x: number, y: number): string | null {
@@ -62,6 +69,11 @@ export class MapView {
       for (let x = 0; x < s.width; x++) {
         const id = s.terrain[y * s.width + x];
         const def = getTerrain(id);
+        if (this.hasBuilding(x, y)) {
+          // buildings stand on plain ground; their sprites are drawn by BuildingLayer
+          this.plains(x, y);
+          continue;
+        }
         switch (def.autotile) {
           case 'road': {
             this.plains(x, y);
@@ -101,7 +113,7 @@ export class MapView {
   }
 
   private connectsRoad(x: number, y: number): boolean {
-    return this.isRoadLike(this.terrainId(x, y));
+    return this.isRoadLike(this.terrainId(x, y)) || this.hasBuilding(x, y);
   }
 
   get pixelWidth(): number {

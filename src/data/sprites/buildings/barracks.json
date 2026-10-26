@@ -1,0 +1,44 @@
+{
+  "id": "barracks",
+  "fps": 2,
+  "frames": {
+    "idle": [
+      [
+        ".k11............",
+        ".k1121..........",
+        ".k1111..........",
+        ".k..............",
+        ".k....kkkkkkkk..",
+        ".k...k1122222k..",
+        ".k..k11222223k..",
+        ".k.k112222233k..",
+        ".kkkkkkkkkkkkkk.",
+        "..kbBbBbBbBbBbk.",
+        "..kbkkkbBbkkkbk.",
+        "..kbkvkbBbkvkbk.",
+        "..kbkkkbkkkkkbk.",
+        "..kbBbBbkBBkbBk.",
+        "..kkkkkkkkkkkkk.",
+        "................"
+      ],
+      [
+        ".k1.............",
+        ".k1121..........",
+        ".k11111.........",
+        ".k..............",
+        ".k....kkkkkkkk..",
+        ".k...k1122222k..",
+        ".k..k11222223k..",
+        ".k.k112222233k..",
+        ".kkkkkkkkkkkkkk.",
+        "..kbBbBbBbBbBbk.",
+        "..kbkkkbBbkkkbk.",
+        "..kbkvkbBbkvkbk.",
+        "..kbkkkbkkkkkbk.",
+        "..kbBbBbkBBkbBk.",
+        "..kkkkkkkkkkkkk.",
+        "................"
+      ]
+    ]
+  }
+}
