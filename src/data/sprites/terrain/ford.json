@@ -1,0 +1,44 @@
+{
+  "id": "ford",
+  "fps": 1.5,
+  "frames": {
+    "default": [
+      [
+        "vvvvvvvvvvvvvvvv",
+        "vvvvvvvvvvvvvggv",
+        "vvvvvvvggvvvgGGd",
+        "vvccWvgGGdvvvddv",
+        "vvvvvvvddvvvvvvv",
+        "vvvvvvvvvvccWvvv",
+        "vvggvvvvvvvvvvvv",
+        "vgGGdvvvvvvvvvvv",
+        "vvddvvvvvvvvvvvv",
+        "vvvvvvvvvvvggvvv",
+        "vvvvvvvvvvgGGdvv",
+        "vvvvvccWvvvddvvv",
+        "vvvvvvvvvvvvvvvv",
+        "vvvvvggvvvvvccWv",
+        "vvvvgGGdvvvvvvvv",
+        "vvvvvddvvvvvvvvv"
+      ],
+      [
+        "vvvvvvvvvvvvvvvv",
+        "vvvvvvvvvvvvvggv",
+        "vvvvvvvggvvvgGGd",
+        "vvvvccgGGdvvvddv",
+        "vvvvvvvddvvvvvvv",
+        "vvvvvvvvvvvvccWv",
+        "vvggvvvvvvvvvvvv",
+        "vgGGdvvvvvvvvvvv",
+        "vvddvvvvvvvvvvvv",
+        "vvvvvvvvvvvggvvv",
+        "vvvvvvvvvvgGGdvv",
+        "vvvvvvvccWvddvvv",
+        "vvvvvvvvvvvvvvvv",
+        "Wvvvvggvvvvvvvcc",
+        "vvvvgGGdvvvvvvvv",
+        "vvvvvddvvvvvvvvv"
+      ]
+    ]
+  }
+}

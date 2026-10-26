@@ -1,0 +1,25 @@
+{
+  "id": "hills",
+  "frames": {
+    "default": [
+      [
+        "eeeeeeeeeeeeeeee",
+        "eeeeeeeeeeeeeeee",
+        "eeeeeeeeeleleeee",
+        "eeleEEEEeeEeeeee",
+        "eeEEllllEEeeeeee",
+        "eElllllllaEeeeee",
+        "ellllllllaaeeeee",
+        "EllllllllaaElele",
+        "aaaaaaaaaaaaeEee",
+        "eeeeeeeeeeeeeeee",
+        "eeeeeeeeeEEEEeee",
+        "eeeeeeeEEllllEEe",
+        "eeelelelllllllae",
+        "eeeeEeElllllllaE",
+        "eeeeeeaaaaaaaaaa",
+        "eeeeeeeeeeeeeeee"
+      ]
+    ]
+  }
+}

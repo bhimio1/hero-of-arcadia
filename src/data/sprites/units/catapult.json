@@ -1,0 +1,64 @@
+{
+  "id": "catapult",
+  "fps": 2,
+  "frames": {
+    "idle": [
+      [
+        "................",
+        "..kkk...........",
+        ".kbbbk..........",
+        ".kbbbkk.........",
+        "..kkkbbk........",
+        "......kbbk......",
+        ".......kbbk..k..",
+        "........kbbk.k11",
+        "...kkkkkkkbbkk22",
+        "..kbbbbbbbbbbkk.",
+        "..kBBBBBBBBBBBk.",
+        "...k2kkkkkk2kk..",
+        "..kdgdk...kdgdk.",
+        "..kgkgk...kgkgk.",
+        "..kdgdk...kdgdk.",
+        "...kkk.....kkk.."
+      ],
+      [
+        "................",
+        "..kkk...........",
+        ".kbbbk..........",
+        ".kbbbkk.........",
+        "..kkkbbk........",
+        "......kbbk......",
+        ".......kbbk..k..",
+        "........kbbk.k1.",
+        "...kkkkkkkbbkk21",
+        "..kbbbbbbbbbbkk2",
+        "..kBBBBBBBBBBBk.",
+        "...k2kkkkkk2kk..",
+        "..kdgdk...kdgdk.",
+        "..kgkgk...kgkgk.",
+        "..kdgdk...kdgdk.",
+        "...kkk.....kkk.."
+      ]
+    ],
+    "attack": [
+      [
+        "..........kkk...",
+        ".........kbbbk..",
+        ".........kbbbk..",
+        "..........kbk...",
+        "..........kbk...",
+        ".........kbk....",
+        ".........kbk...k",
+        "........kbk....k",
+        "...kkkkkkbkkkk.k",
+        "..kbbbbbbbbbbkk2",
+        "..kBBBBBBBBBBBk1",
+        "...k2kkkkkk2kk..",
+        "..kdgdk...kdgdk.",
+        "..kgkgk...kgkgk.",
+        "..kdgdk...kdgdk.",
+        "...kkk.....kkk.."
+      ]
+    ]
+  }
+}

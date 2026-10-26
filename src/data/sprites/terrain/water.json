@@ -1,0 +1,44 @@
+{
+  "id": "water",
+  "fps": 1.5,
+  "frames": {
+    "default": [
+      [
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuuuuuvvc",
+        "uvvcuuuuuuuuuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuvvcuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuvvcuuuuuuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuuuuvvcu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuvvcuuuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuuuuuuuu"
+      ],
+      [
+        "uuuuuuuuuuuuuuuu",
+        "vcuuuuuuuuuuuuuv",
+        "uuuvvcuuuuuuuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuuuvvcuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuvvcuuuuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "cuuuuuuuuuuuuuvv",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuvvcuuuu",
+        "uuuuuuuuuuuuuuuu",
+        "uuuuuuuuuuuuuuuu"
+      ]
+    ]
+  }
+}

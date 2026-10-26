@@ -1,0 +1,33 @@
+{
+  "id": "greenvale",
+  "name": "Greenvale",
+  "description": "A quiet valley with a winding road. Rout the enemy to win.",
+  "players": [{"faction": "cobalt", "controller": "human"}, {"faction": "ember", "controller": "ai"}],
+  "rows": [
+    "^^h..ff......f..h...",
+    "^h....f..........ff.",
+    "h...........hh....f.",
+    "..====......h^h.....",
+    "..=..=====....h.....",
+    "ff.......=.....ff...",
+    ".f...~~..==..~~...f.",
+    "...ff.....=.......ff",
+    ".....h....=====..=..",
+    ".....h^h......====..",
+    ".f....hh...........h",
+    ".ff..........f....h^",
+    "...h..f......ff..h^^"
+  ],
+  "units": [
+    {"type": "pikeman", "owner": 0, "x": 2, "y": 6},
+    {"type": "pikeman", "owner": 1, "x": 17, "y": 6},
+    {"type": "pikeman", "owner": 0, "x": 3, "y": 8},
+    {"type": "pikeman", "owner": 1, "x": 16, "y": 4},
+    {"type": "archer", "owner": 0, "x": 1, "y": 7},
+    {"type": "archer", "owner": 1, "x": 18, "y": 5},
+    {"type": "rider", "owner": 0, "x": 3, "y": 4},
+    {"type": "rider", "owner": 1, "x": 16, "y": 8},
+    {"type": "catapult", "owner": 0, "x": 1, "y": 9},
+    {"type": "catapult", "owner": 1, "x": 18, "y": 3}
+  ]
+}

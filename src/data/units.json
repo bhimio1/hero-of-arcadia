@@ -1,0 +1,30 @@
+[
+  {
+    "id": "pikeman", "name": "Pikeman", "cost": 100,
+    "maxHp": 10, "attack": 5, "defense": 2, "move": 3, "moveType": "foot",
+    "range": [1, 1], "vision": 2, "moveAndFire": true, "counter": true, "canCapture": true,
+    "bonusVs": { "rider": 1.5 },
+    "blurb": "Cheap and sturdy. Captures buildings. Braces against riders."
+  },
+  {
+    "id": "archer", "name": "Archer", "cost": 200,
+    "maxHp": 10, "attack": 5, "defense": 1, "move": 3, "moveType": "foot",
+    "range": [2, 2], "vision": 3, "moveAndFire": true, "counter": true, "canCapture": false,
+    "bonusVs": { "pikeman": 1.2 },
+    "blurb": "Shoots 2 tiles away. Helpless when enemies close in."
+  },
+  {
+    "id": "rider", "name": "Rider", "cost": 300,
+    "maxHp": 10, "attack": 7, "defense": 2, "move": 6, "moveType": "mounted",
+    "range": [1, 1], "vision": 3, "moveAndFire": true, "counter": true, "canCapture": false,
+    "bonusVs": { "archer": 1.5, "catapult": 1.5 },
+    "blurb": "Fast shock cavalry. Slowed by forests, stopped by mountains."
+  },
+  {
+    "id": "catapult", "name": "Catapult", "cost": 400,
+    "maxHp": 10, "attack": 8, "defense": 1, "move": 4, "moveType": "wheeled",
+    "range": [2, 3], "vision": 2, "moveAndFire": false, "counter": false, "canCapture": false,
+    "bonusVs": {},
+    "blurb": "Hurls stones 2-3 tiles. Must stand still to fire. Never strikes back."
+  }
+]

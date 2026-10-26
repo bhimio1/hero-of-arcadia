@@ -1,0 +1,25 @@
+{
+  "id": "bridge",
+  "frames": {
+    "horizontal": [
+      [
+        "................",
+        ".k............k.",
+        "kBkkkkkkkkkkkkBk",
+        "bsssbsssbsssbsss",
+        "bbbBbbbBbbbBbbbB",
+        "bbbBbbbBbbbBbbbB",
+        "bbbBbbbBbbbBbbbB",
+        "bbbBbbbBbbbBbbbB",
+        "bbbBbbbBbbbBbbbB",
+        "bbbBbbbBbbbBbbbB",
+        "bbbBbbbBbbbBbbbB",
+        "bbbBbbbBbbbBbbbB",
+        "bsssbsssbsssbsss",
+        "kkkkkkkkkkkkkkkk",
+        "VVVVVVVVVVVVVVVV",
+        "................"
+      ]
+    ]
+  }
+}

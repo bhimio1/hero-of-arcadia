@@ -1,0 +1,6 @@
+[
+  { "id": "cobalt", "name": "Cobalt League", "short": "Cobalt", "ramp": [18, 17, 15] },
+  { "id": "ember", "name": "Ember Host", "short": "Ember", "ramp": [28, 27, 2] },
+  { "id": "moss", "name": "Moss Wardens", "short": "Moss", "ramp": [9, 10, 12] },
+  { "id": "amber", "name": "Amber Concord", "short": "Amber", "ramp": [8, 5, 3] }
+]

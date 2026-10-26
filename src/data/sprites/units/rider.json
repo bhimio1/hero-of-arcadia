@@ -1,0 +1,64 @@
+{
+  "id": "rider",
+  "fps": 2,
+  "frames": {
+    "idle": [
+      [
+        ".....kkkk......w",
+        "....k3333k....w.",
+        "....k2222k...g..",
+        "....ksskskk.g...",
+        "....kssssk.g....",
+        ".....kkkkkg.....",
+        "....k1122kskk...",
+        "....k12222kBbk..",
+        "....k12222kbbbk.",
+        ".....k122kBbkbbk",
+        "..kkkkk3kBBbbbSk",
+        ".kbb22kkkbbbkkk.",
+        "kBbbbbbbbbbbk...",
+        "kBkbbbbbbbbbk...",
+        ".kbkk...kkbk....",
+        ".kbk.....kbk...."
+      ],
+      [
+        "................",
+        ".....kkkk......w",
+        "....k3333k....w.",
+        "....k2222k...g..",
+        "....ksskskk.g...",
+        "....kssssk.g....",
+        ".....kkkkkg.....",
+        "....k1122kskk...",
+        "....k12222kBbk..",
+        "....k12222kbbbk.",
+        ".....k122kBbkbbk",
+        "..kkkkk3kBBbbbSk",
+        ".kbb22kkkbbbkkk.",
+        "kBbbbbbbbbbbk...",
+        ".kbkk...kkbk....",
+        ".kbk.....kbk...."
+      ]
+    ],
+    "attack": [
+      [
+        "................",
+        ".....kkkk.......",
+        "....k3333k......",
+        "....k2222k......",
+        "....ksskskk.....",
+        "....kssssk......",
+        ".....kkkkk......",
+        "....k1122ksggggw",
+        "....k12222kBbk..",
+        "....k12222kbbbk.",
+        ".....k122kBbkbbk",
+        "..kkkkk3kBBbbbSk",
+        ".kbb22kkkbbbkkk.",
+        "kBbbbbbbbbbbk...",
+        "kbk.k...kk.kbk..",
+        "kk.......kk.kk.."
+      ]
+    ]
+  }
+}

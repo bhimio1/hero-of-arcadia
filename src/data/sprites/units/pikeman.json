@@ -1,0 +1,64 @@
+{
+  "id": "pikeman",
+  "fps": 2,
+  "frames": {
+    "idle": [
+      [
+        "..............w.",
+        ".............wgw",
+        "......kkkk....g.",
+        ".....kggggk...b.",
+        "....kgwgggGk..b.",
+        "....kGGGGGGk..b.",
+        "....kssssSSk..b.",
+        "....ksssskSk..b.",
+        ".....kssssk..kbk",
+        "....k12221kkksbk",
+        "...k1122221kSkb.",
+        "...k1222223kk.b.",
+        "...kkbbtbbkk..b.",
+        "....k3k.k3k...b.",
+        "....kbk.kbk.....",
+        "...kkkk.kkkk...."
+      ],
+      [
+        "................",
+        "..............w.",
+        ".............wgw",
+        "......kkkk....g.",
+        ".....kggggk...b.",
+        "....kgwgggGk..b.",
+        "....kGGGGGGk..b.",
+        "....kssssSSk..b.",
+        "....ksssskSk..b.",
+        ".....kssssk..kbk",
+        "....k12221kkksbk",
+        "...k1122221kSkb.",
+        "...k1222223kk.b.",
+        "....k3k.k3k...b.",
+        "....kbk.kbk.....",
+        "...kkkk.kkkk...."
+      ]
+    ],
+    "attack": [
+      [
+        "................",
+        "................",
+        ".......kkkk.....",
+        "......kggggk....",
+        ".....kgwgggGk...",
+        ".....kGGGGGGk...",
+        ".....kssssSSk...",
+        ".....ksssskSk...",
+        "......kssssk....",
+        ".....k12221kk...",
+        "....k1122221sbgw",
+        "....k1222223kk.w",
+        "....kkbbtbbkk...",
+        "....k3k..k3k....",
+        "...kbk....kbk...",
+        "..kkkk....kkkk.."
+      ]
+    ]
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "id": "plains",
+  "frames": {
+    "variants": [
+      [
+        "eeeeeeeeeeeeeeee",
+        "eeeeeeeeeeleleee",
+        "eleleeeeeeeEeeee",
+        "eeEeeeeeeeeeeeee",
+        "eeeeeeeeeeeeeeee",
+        "eeeeeeeeeeeeeeee",
+        "eeeeeeeeeeeeeeee",
+        "eeeeeeleleeeeeee",
+        "eeeeeeeEeeeeelel",
+        "eeeeeeeeeeeeeeEe",
+        "eeeeeeeeeeeeeeee",
+        "eeleleeeeeeeeeee",
+        "eeeEeeeeeleleeee",
+        "eeeeeeeeeeEeeeee",
+        "eeeeeeeeeeeeeele",
+        "eeeeeeeeeeeeeeeE"
+      ],
+      [
+        "eeeeeeeeeeeeeeee",
+        "eeeeeeeeeeleleee",
+        "eeleleeeeeeEeeee",
+        "eeeEeeweeeeeeeee",
+        "eeeeeeeeeeeeeeee",
+        "eeeeeeeeeeeeeeee",
+        "eeeeeleleeeeeeee",
+        "eeeeeeEeeeeeelel",
+        "eeeeeeeeeeeeeeEe",
+        "eeeeeeeeeeeeeeee",
+        "eeeeeeeeeeeyeeee",
+        "eeleleeeeeeeeeee",
+        "eeeEeeeeeeeeeeee",
+        "eeeeeeeeleleeele",
+        "eeeweeeeeEeeeeeE",
+        "eeeeeeeeeeeeeeee"
+      ]
+    ]
+  }
+}
