@@ -33,9 +33,9 @@ describe('victory', () => {
       { type: 'pikeman', owner: 2, x: 5, y: 0 },
     ], {
       players: [
-        { faction: 'cobalt', controller: 'human' },
-        { faction: 'ember', controller: 'human' },
-        { faction: 'moss', controller: 'human' },
+        { faction: 'alpha', controller: 'human' },
+        { faction: 'beta', controller: 'human' },
+        { faction: 'alpha', controller: 'human' },
       ],
     });
     let s = createGame({ mapId: 'test', seed: 1 }, map);

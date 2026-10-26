@@ -3,7 +3,7 @@
     "id": "pikeman", "name": "Pikeman", "cost": 100, "tags": ["infantry"],
     "maxHp": 10, "attack": 5, "defense": 2, "move": 3, "moveType": "foot",
     "range": [1, 1], "vision": 2, "moveAndFire": true, "counter": true, "canCapture": true,
-    "bonusVs": {"rider":  1.5,  "scout":  1.5},
+    "bonusVs": {"rider":  1.5,  "scout":  1.5,  "knight":  1.5},
     "blurb": "Cheap and sturdy. Captures buildings. Braces against riders."
   },
   {
@@ -45,7 +45,42 @@
     "id": "battlemage", "name": "Battlemage", "cost": 450, "tags": ["magic",  "ranged"],
     "maxHp": 10, "attack": 7, "defense": 1, "move": 3, "moveType": "foot",
     "range": [1, 2], "vision": 3, "moveAndFire": true, "counter": true, "canCapture": false,
-    "bonusVs": {"shieldbearer":  1.5,  "rider":  1.2},
+    "bonusVs": {"shieldbearer":  1.5,  "rider":  1.2,  "knight":  1.2},
     "blurb": "Hurls arcane fire up to two tiles. Melts armour, but frail."
+  },
+  {
+    "id": "berserker", "name": "Berserker", "cost": 250, "tags": ["infantry"],
+    "maxHp": 10, "attack": 7, "defense": 1, "move": 4, "moveType": "foot",
+    "range": [1, 1], "vision": 2, "moveAndFire": true, "counter": true, "canCapture": true,
+    "bonusVs": {},
+    "blurb": "Ember shock troops. Hit hard, guard little. Captures."
+  },
+  {
+    "id": "ranger", "name": "Ranger", "cost": 250, "tags": ["ranged"],
+    "maxHp": 10, "attack": 5, "defense": 1, "move": 3, "moveType": "foot",
+    "range": [2, 3], "vision": 4, "moveAndFire": true, "counter": true, "canCapture": false,
+    "bonusVs": {"pikeman":  1.2,  "shieldbearer":  0.5},
+    "blurb": "Moss longbows that outrange common archers and spot far."
+  },
+  {
+    "id": "hexer", "name": "Hexer", "cost": 350, "tags": ["magic",  "ranged"],
+    "maxHp": 10, "attack": 7, "defense": 1, "move": 3, "moveType": "foot",
+    "range": [2, 3], "vision": 3, "moveAndFire": false, "counter": false, "canCapture": false,
+    "bonusVs": {"shieldbearer":  1.5,  "knight":  1.3},
+    "blurb": "Violet curse-caster. Walks where catapults can't, but must stand still to strike."
+  },
+  {
+    "id": "corsair", "name": "Corsair", "cost": 200, "tags": ["infantry",  "light"],
+    "maxHp": 10, "attack": 5, "defense": 1, "move": 5, "moveType": "foot",
+    "range": [1, 1], "vision": 4, "moveAndFire": true, "counter": true, "canCapture": true,
+    "bonusVs": {"archer":  1.3,  "catapult":  1.3},
+    "blurb": "Tide raiders on foot: quick, keen-eyed, and they capture."
+  },
+  {
+    "id": "knight", "name": "Knight", "cost": 400, "tags": ["cavalry",  "armored"],
+    "maxHp": 10, "attack": 8, "defense": 3, "move": 5, "moveType": "mounted",
+    "range": [1, 1], "vision": 3, "moveAndFire": true, "counter": true, "canCapture": false,
+    "bonusVs": {"archer":  1.5,  "catapult":  1.5,  "battlemage":  1.5},
+    "blurb": "Ivory heavy cavalry in full plate. Slow to buy, hard to stop."
   }
 ]

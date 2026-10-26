@@ -1,6 +1,94 @@
 [
-  { "id": "cobalt", "name": "Cobalt League", "short": "Cobalt", "ramp": [18, 17, 15] },
-  { "id": "ember", "name": "Ember Host", "short": "Ember", "ramp": [28, 27, 2] },
-  { "id": "moss", "name": "Moss Wardens", "short": "Moss", "ramp": [9, 10, 12] },
-  { "id": "amber", "name": "Amber Concord", "short": "Amber", "ramp": [8, 5, 3] }
+  {
+    "id": "cobalt", "name": "Cobalt League", "short": "Cobalt", "ramp": [18, 17, 15],
+    "blurb": "Disciplined city militias who win by holding the line.",
+    "perks": [
+      { "name": "Shieldwall", "desc": "Shieldbearers cost 50 less and get +1 defense.",
+        "effects": [
+          { "type": "unitCost", "units": ["shieldbearer"], "add": -50 },
+          { "type": "unitStat", "units": ["shieldbearer"], "stat": "defense", "add": 1 }
+        ] },
+      { "name": "Roadwardens", "desc": "Infantry get +1 defense on roads and bridges.",
+        "effects": [ { "type": "terrainDefense", "terrain": ["road", "bridge"], "tags": ["infantry"], "add": 1 } ] }
+    ]
+  },
+  {
+    "id": "ember", "name": "Ember Host", "short": "Ember", "ramp": [28, 27, 2],
+    "blurb": "Raiders of the burnt plains who live to charge.",
+    "perks": [
+      { "name": "Warhorses", "desc": "Cavalry get +1 attack and +1 move.",
+        "effects": [
+          { "type": "unitStat", "tags": ["cavalry"], "stat": "attack", "add": 1 },
+          { "type": "unitStat", "tags": ["cavalry"], "stat": "move", "add": 1 }
+        ] },
+      { "name": "Spoils of War", "desc": "Income is 10% lower: the Host takes what it needs.",
+        "effects": [ { "type": "income", "mul": 0.9 } ] }
+    ],
+    "roster": { "replace": { "shieldbearer": "berserker" } }
+  },
+  {
+    "id": "moss", "name": "Moss Wardens", "short": "Moss", "ramp": [9, 10, 12],
+    "blurb": "Forest folk who move through the trees like wind.",
+    "perks": [
+      { "name": "Woodwise", "desc": "Forests cost 1 to enter for every unit and give +1 extra defense.",
+        "effects": [
+          { "type": "moveCost", "terrain": ["forest"], "set": 1 },
+          { "type": "terrainDefense", "terrain": ["forest"], "add": 1 }
+        ] }
+    ],
+    "roster": { "replace": { "archer": "ranger" } }
+  },
+  {
+    "id": "amber", "name": "Amber Concord", "short": "Amber", "ramp": [8, 5, 3],
+    "blurb": "Merchant princes who buy the war they want.",
+    "perks": [
+      { "name": "Coffers", "desc": "+25% income.", "effects": [ { "type": "income", "mul": 1.25 } ] },
+      { "name": "Engineers", "desc": "Siege units cost 25% less.",
+        "effects": [ { "type": "unitCost", "tags": ["siege"], "mul": 0.75 } ] }
+    ]
+  },
+  {
+    "id": "violet", "name": "Violet Covenant", "short": "Violet", "ramp": [29, 26, 15],
+    "blurb": "A circle of sorcerers who see what others cannot.",
+    "perks": [
+      { "name": "Arcana", "desc": "Magic units cost 100 less.",
+        "effects": [ { "type": "unitCost", "tags": ["magic"], "add": -100 } ] },
+      { "name": "Farsight", "desc": "Every unit gets +1 vision.",
+        "effects": [ { "type": "unitStat", "stat": "vision", "add": 1 } ] }
+    ],
+    "roster": { "replace": { "catapult": "hexer" } }
+  },
+  {
+    "id": "tide", "name": "Tide Wardens", "short": "Tide", "ramp": [19, 11, 14],
+    "blurb": "River clans at home in the shallows.",
+    "perks": [
+      { "name": "Rivercraft", "desc": "Foot units can wade rivers (cost 3); fords cost 1 for everyone.",
+        "effects": [
+          { "type": "moveCost", "terrain": ["water"], "moveTypes": ["foot"], "set": 3 },
+          { "type": "moveCost", "terrain": ["ford"], "set": 1 }
+        ] },
+      { "name": "Waterborn", "desc": "+2 defense in rivers and fords.",
+        "effects": [ { "type": "terrainDefense", "terrain": ["water", "ford"], "add": 2 } ] }
+    ],
+    "roster": { "replace": { "scout": "corsair" } }
+  },
+  {
+    "id": "fen", "name": "Fen Clans", "short": "Fen", "ramp": [30, 13, 14],
+    "blurb": "Hardy marsh clans who never seem to stay down.",
+    "perks": [
+      { "name": "Hardy", "desc": "Units heal 1 HP every turn anywhere, and 1 more on buildings.",
+        "effects": [ { "type": "heal", "anywhere": 1, "buildings": 1 } ] },
+      { "name": "Levy", "desc": "Pikemen cost 20 less.",
+        "effects": [ { "type": "unitCost", "units": ["pikeman"], "add": -20 } ] }
+    ]
+  },
+  {
+    "id": "ivory", "name": "Ivory Order", "short": "Ivory", "ramp": [21, 20, 23],
+    "blurb": "Knightly order sworn to hold every keep it takes.",
+    "perks": [
+      { "name": "Bastions", "desc": "+2 defense on your own buildings.",
+        "effects": [ { "type": "terrainDefense", "ownBuildings": true, "add": 2 } ] }
+    ],
+    "roster": { "replace": { "rider": "knight" } }
+  }
 ]

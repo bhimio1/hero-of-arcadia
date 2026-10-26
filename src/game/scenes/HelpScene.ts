@@ -2,11 +2,13 @@
 // files so they never drift from the actual numbers.
 
 import Phaser from 'phaser';
-import { BUILDINGS, TERRAIN, UNITS } from '../../core/data';
+import { BUILDINGS, FACTIONS, TERRAIN, UNITS } from '../../core/data';
+import { describeFaction } from '../../core/describe';
+import type { UnitDef } from '../../core/types';
 import { VIEW_H, VIEW_W } from '../config';
 import { sfx } from '../audio/sfx';
 import { unitTextureKey } from '../gfx/bake';
-import { UI } from '../gfx/palette';
+import { TEAM_RAMPS, UI } from '../gfx/palette';
 import { addBackdrop } from '../render/Backdrop';
 import { bindMenuKeys, hintText, Panel, text, textWidth, wrapText } from '../ui/widgets';
 
@@ -18,7 +20,7 @@ interface Page {
 
 const COLS = 52;
 
-const PAGES: Page[] = [
+const RULE_PAGES: Page[] = [
   {
     title: 'THE GOAL',
     lines: [
@@ -43,21 +45,7 @@ const PAGES: Page[] = [
       'The preview window shows the result before you commit. With LUCK on, each strike may deal 1 extra damage.',
     ],
   },
-  {
-    title: 'UNITS',
-    build: (scene, panel) => {
-      let y = 22;
-      panel.add(text(scene, 30, y, 'NAME          COST HP ATK DEF MOV RNG SEE', UI.textDim));
-      y += 11;
-      for (const u of Object.values(UNITS)) {
-        panel.add(scene.add.sprite(8, y - 5, unitTextureKey(u.id, 'cobalt'), 'idle0').setOrigin(0, 0));
-        const rng = u.range[0] === u.range[1] ? `${u.range[0]}` : `${u.range[0]}-${u.range[1]}`;
-        const row = `${u.name.toUpperCase().padEnd(13)} ${String(u.cost).padStart(4)} ${String(u.maxHp).padStart(2)} ${String(u.attack).padStart(3)} ${String(u.defense).padStart(3)} ${String(u.move).padStart(3)} ${rng.padStart(3)} ${String(u.vision).padStart(3)}`;
-        panel.add(text(scene, 30, y, row, UI.text));
-        y += 18;
-      }
-    },
-  },
+  // unit pages (six units each) and the factions page are inserted by buildPages()
   {
     title: 'TERRAIN AND BUILDINGS',
     build: (scene, panel) => {
@@ -75,7 +63,7 @@ const PAGES: Page[] = [
       panel.add(text(scene, 10, y, 'BUILDING  DEF  GOLD  NOTES', UI.textDim));
       y += 11;
       for (const b of Object.values(BUILDINGS)) {
-        const note = b.hq ? 'LOSE IT, LOSE THE WAR' : b.produces.length ? 'RAISES TROOPS' : 'HEALS +2 HP';
+        const note = b.hq ? 'LOSE IT, LOSE THE WAR' : b.produces.length ? 'RAISES TROOPS' : `HEALS +${b.heal} HP`;
         panel.add(text(scene, 10, y, `${b.name.toUpperCase().padEnd(9)} +${b.defense}   ${String(b.income).padStart(3)}  ${note}`, UI.text));
         y += 10;
       }
@@ -99,9 +87,68 @@ const PAGES: Page[] = [
   },
 ];
 
+function unitPage(units: UnitDef[], n: number, of: number): Page {
+  return {
+    title: of > 1 ? `UNITS ${n}/${of}` : 'UNITS',
+    build: (scene, panel) => {
+      let y = 22;
+      panel.add(text(scene, 30, y, 'NAME          COST HP ATK DEF MOV RNG SEE', UI.textDim));
+      y += 11;
+      for (const u of units) {
+        panel.add(scene.add.sprite(8, y - 5, unitTextureKey(u.id, 'cobalt'), 'idle0').setOrigin(0, 0));
+        const rng = u.range[0] === u.range[1] ? `${u.range[0]}` : `${u.range[0]}-${u.range[1]}`;
+        const row = `${u.name.toUpperCase().padEnd(13)} ${String(u.cost).padStart(4)} ${String(u.maxHp).padStart(2)} ${String(u.attack).padStart(3)} ${String(u.defense).padStart(3)} ${String(u.move).padStart(3)} ${rng.padStart(3)} ${String(u.vision).padStart(3)}`;
+        panel.add(text(scene, 30, y, row, UI.text));
+        y += 9;
+        panel.add(text(scene, 30, y, u.tags.join(' ').toUpperCase(), UI.textDim));
+        y += 23;
+      }
+    },
+  };
+}
+
+function factionPages(): Page[] {
+  const factions = Object.values(FACTIONS);
+  const perPage = 2;
+  const pages: Page[] = [];
+  for (let i = 0; i < factions.length; i += perPage) {
+    const group = factions.slice(i, i + perPage);
+    pages.push({
+      title: `FACTIONS ${i / perPage + 1}/${Math.ceil(factions.length / perPage)}`,
+      build: (scene, panel) => {
+        let y = 24;
+        for (const f of group) {
+          panel.add(text(scene, 12, y, f.name.toUpperCase(), TEAM_RAMPS[f.id]?.[0] ?? UI.text));
+          y += 11;
+          for (const line of [f.blurb ?? '', ...describeFaction(f)].filter(Boolean)) {
+            for (const w of wrapText(line, COLS)) {
+              panel.add(text(scene, 12, y, w, line === f.blurb ? UI.textDim : UI.text));
+              y += 10;
+            }
+          }
+          y += 8;
+        }
+      },
+    });
+  }
+  return pages;
+}
+
+/** Rule pages plus unit and faction pages generated from the active content. */
+function buildPages(): Page[] {
+  const units = Object.values(UNITS);
+  const unitPages: Page[] = [];
+  const per = 6;
+  const count = Math.ceil(units.length / per);
+  for (let i = 0; i < count; i++) unitPages.push(unitPage(units.slice(i * per, i * per + per), i + 1, count));
+  const at = RULE_PAGES.findIndex((p) => p.title === 'COMBAT') + 1;
+  return [...RULE_PAGES.slice(0, at), ...unitPages, ...factionPages(), ...RULE_PAGES.slice(at)];
+}
+
 export class HelpScene extends Phaser.Scene {
   private page = 0;
   private panel: Panel | null = null;
+  private pages: Page[] = [];
 
   constructor() {
     super('Help');
@@ -109,12 +156,13 @@ export class HelpScene extends Phaser.Scene {
 
   create(): void {
     this.page = 0;
+    this.pages = buildPages();
     addBackdrop(this, 'wildwood');
     hintText(this, VIEW_H - 24, 'LEFT/RIGHT OR CLICK: PAGE   ESC: BACK');
     this.show();
     const kb = this.input.keyboard!;
     const flip = (d: number) => () => {
-      this.page = (this.page + d + PAGES.length) % PAGES.length;
+      this.page = (this.page + d + this.pages.length) % this.pages.length;
       sfx.play('cursor');
       this.show();
     };
@@ -133,11 +181,11 @@ export class HelpScene extends Phaser.Scene {
 
   private show(): void {
     this.panel?.destroy();
-    const pg = PAGES[this.page];
+    const pg = this.pages[this.page];
     const w = VIEW_W - 24;
     const h = VIEW_H - 40;
     const p = new Panel(this, 12, 10, w, h).setScrollFactor(0).setDepth(700);
-    const title = `${pg.title}  (${this.page + 1}/${PAGES.length})`;
+    const title = `${pg.title}  (${this.page + 1}/${this.pages.length})`;
     p.add(text(this, Math.round((w - textWidth(title)) / 2), 8, title, UI.highlight));
     if (pg.lines) {
       let y = 26;

@@ -15,8 +15,9 @@ enabled, see [Releases](#releases)). Desktop installers are attached to tagged r
 
 ## Features
 
+- Eight factions, each with its own perks and most with a unique unit.
 - Five hand-made maps, from a quick skirmish to a four-army free-for-all.
-- Seven unit types with distinct roles and matchups, all defined in JSON.
+- Twelve unit types with distinct roles and matchups, all defined in JSON.
 - Economy: villages, barracks and keeps pay gold, heal troops and can be captured.
 - Fog of war with forest ambushes, high-ground vision and scouts.
 - An AI opponent that plays by the same rules and only sees what its army sees.
@@ -57,6 +58,25 @@ The game has a **How to Play** screen with these rules and live unit/terrain tab
 | Scout | 150 | 10 | 3 | 1 | 7 (mounted) | 1 | 5 | Swift outrider with keen eyes. Sees far through the fog. |
 | Shieldbearer | 250 | 10 | 4 | 4 | 3 (foot) | 1 | 2 | Heavy infantry behind a tower shield. Shrugs off arrows. Captures. |
 | Battlemage | 450 | 10 | 7 | 1 | 3 (foot) | 1–2 | 3 | Hurls arcane fire up to two tiles. Melts armour, but frail. |
+
+Faction-only units: **Berserker** (Ember, replaces Shieldbearer), **Ranger** (Moss,
+replaces Archer, range 2–3), **Hexer** (Violet, replaces Catapult), **Corsair** (Tide,
+replaces Scout, captures), **Knight** (Ivory, replaces Rider).
+
+### Factions
+
+| Faction | Perks | Unique unit |
+| --- | --- | --- |
+| Cobalt League | Shieldbearers cost 50 less, +1 defense; infantry +1 defense on roads and bridges | – |
+| Ember Host | Cavalry +1 attack and +1 move; income −10% | Berserker |
+| Moss Wardens | Forests cost 1 to enter and give +1 extra defense | Ranger |
+| Amber Concord | +25% income; siege units cost 25% less | – |
+| Violet Covenant | Magic units cost 100 less; every unit +1 vision | Hexer |
+| Tide Wardens | Foot units wade rivers (cost 3), fords cost 1; +2 defense in water | Corsair |
+| Fen Clans | Units heal 1 HP every turn anywhere (+1 more on buildings); pikemen cost 20 less | – |
+| Ivory Order | +2 defense on your own buildings | Knight |
+
+Pick factions per army on the second page of **New Game** (left/right cycles factions).
 
 ### Terrain
 

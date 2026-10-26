@@ -1,0 +1,64 @@
+{
+  "id": "ranger",
+  "fps": 2,
+  "frames": {
+    "idle": [
+      [
+        "...........kk...",
+        "......2....wbk..",
+        ".....k22k..w.bk.",
+        "....k1122k.w..bk",
+        "...k112222kw..bk",
+        "...k12sssskw..bk",
+        "...k2ssskskw..bk",
+        "...k2ssssskw..bk",
+        "..k22kssskkw..bk",
+        "..k2k12222ss..bk",
+        "..k2k122223w..bk",
+        "..k22122223w.bk.",
+        "...k2kbbtbbwbk..",
+        "....kk3k.k3kk...",
+        ".....kbk.kbk....",
+        "....kkkk.kkkk..."
+      ],
+      [
+        "................",
+        "...........kk...",
+        "......2....wbk..",
+        ".....k22k..w.bk.",
+        "....k1122k.w..bk",
+        "...k112222kw..bk",
+        "...k12sssskw..bk",
+        "...k2ssskskw..bk",
+        "...k2ssssskw..bk",
+        "..k22kssskkw..bk",
+        "..k2k12222ss..bk",
+        "..k2k122223w..bk",
+        "..k22122223w.bk.",
+        "....kk3k.k3kk...",
+        ".....kbk.kbk....",
+        "....kkkk.kkkk..."
+      ]
+    ],
+    "attack": [
+      [
+        "............kk..",
+        "......2....w.bk.",
+        ".....k22k.w...bk",
+        "....k1122w....bk",
+        "...k1122w2k...bk",
+        "...k12sssggggwbk",
+        "...k2ssswsk...bk",
+        "...k2sssswk...bk",
+        "..k22kssskw...bk",
+        "..k2k12222kw.bk.",
+        "..k2k122223kkk..",
+        "..k22122223k....",
+        "...k2kbbtbbkk...",
+        "....kk3k.k3k....",
+        ".....kbk.kbk....",
+        "....kkkk.kkkk..."
+      ]
+    ]
+  }
+}

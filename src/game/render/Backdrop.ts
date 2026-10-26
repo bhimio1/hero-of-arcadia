@@ -1,8 +1,9 @@
 // Menu backgrounds (a live battlefield slowly panning under a dither) and map thumbnails.
 
 import Phaser from 'phaser';
-import { getBuildingDef, getMap, getTerrain, parseMapTerrain } from '../../core/data';
+import { getBuildingDef, getTerrain, parseMapTerrain } from '../../core/data';
 import { statsOf } from '../../core/stats';
+import type { MapDef } from '../../core/types';
 import { createGame } from '../../core/state';
 import { VIEW_H, VIEW_W } from '../config';
 import { bakeDither } from '../gfx/bake';
@@ -48,10 +49,9 @@ export function addBackdrop(scene: Phaser.Scene, mapId: string): void {
 }
 
 /** A small map thumbnail texture (`px` pixels per tile); returns its texture key. */
-export function minimapTexture(scene: Phaser.Scene, mapId: string, px = 3): string {
-  const key = `minimap-${mapId}-${px}`;
+export function minimapTexture(scene: Phaser.Scene, map: MapDef, px = 3): string {
+  const key = `minimap-${map.id}-${px}`;
   if (scene.textures.exists(key)) return key;
-  const map = getMap(mapId);
   const { width, height, terrain } = parseMapTerrain(map);
   const tex = scene.textures.createCanvas(key, width * px, height * px);
   if (!tex) return key;

@@ -1,5 +1,5 @@
 import paletteJson from '../../data/palette.json';
-import factionsJson from '../../data/factions.json';
+import { FACTIONS } from '../../core/data';
 
 export type RGBA = [number, number, number, number];
 
@@ -26,12 +26,19 @@ export function palCss(index: number): string {
 export const UI = paletteJson.ui;
 
 /** Team ramps by faction id, plus "neutral" for unowned buildings. */
-export const TEAM_RAMPS: Record<string, [number, number, number]> = {
-  neutral: paletteJson.neutralRamp as [number, number, number],
-};
-for (const f of factionsJson) TEAM_RAMPS[f.id] = f.ramp as [number, number, number];
+export const TEAM_RAMPS: Record<string, [number, number, number]> = {};
 
-export const TEAM_IDS = Object.keys(TEAM_RAMPS);
+/** Every team colour id (factions plus "neutral"); refreshed by syncTeamColors(). */
+export const TEAM_IDS: string[] = [];
+
+/** Rebuilds team colours from the active factions (call after content changes). */
+export function syncTeamColors(): void {
+  for (const k of Object.keys(TEAM_RAMPS)) delete TEAM_RAMPS[k];
+  TEAM_RAMPS.neutral = paletteJson.neutralRamp as [number, number, number];
+  for (const f of Object.values(FACTIONS)) TEAM_RAMPS[f.id] = f.ramp;
+  TEAM_IDS.splice(0, TEAM_IDS.length, ...Object.keys(TEAM_RAMPS));
+}
+syncTeamColors();
 
 /** Main (mid) colour of a faction, for UI accents. */
 export function teamColor(faction: string): number {

@@ -76,7 +76,7 @@ export class SavesScene extends Phaser.Scene {
     this.details = null;
     if (!save) return;
     const map = getMap(save.snapshot.mapId);
-    const key = minimapTexture(this, map.id, 2);
+    const key = minimapTexture(this, map, 2);
     const tex = this.textures.get(key).getSourceImage() as HTMLCanvasElement;
     const w = 300;
     const h = Math.max(tex.height + 16, 64);

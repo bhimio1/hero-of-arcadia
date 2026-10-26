@@ -73,6 +73,17 @@
   capture strength and rosters — from base data plus faction perks, cached per content
   version. Rules, AI, fog and UI all read effective values.
 
+- **M10 — Eight factions.** Four new factions (Violet Covenant, Tide Wardens, Fen Clans,
+  Ivory Order) join the original four, and all eight have perks defined purely in data
+  (unit stats and costs, movement, terrain defense, income, healing). Five faction-only
+  units with new sprites (Berserker, Ranger, Hexer, Corsair, Knight) swap in through
+  roster replacements, including in maps' starting armies. Perk descriptions are
+  generated from the effect data. New Game is now two pages: battlefield, then armies
+  (faction and player/CPU per army) with a faction info panel. Team colours come from
+  the active factions; How to Play gains unit pages and faction pages. Tests: every
+  faction plays under the AI; perk-free test factions keep rules tests independent of
+  balance.
+
 ## Next
 
 - Enable GitHub Pages (Settings → Pages → Source: GitHub Actions) so the web build goes live.

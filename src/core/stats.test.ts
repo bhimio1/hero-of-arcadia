@@ -14,7 +14,7 @@ import {
   statsOf,
   unitStatsFor,
 } from './stats';
-import { makeGame } from './testing';
+import { makeGame, TEST_LAYER } from './testing';
 import type { FactionDef, MapUnitPlacement } from './types';
 
 // A test faction that exercises every effect type.
@@ -47,7 +47,7 @@ const tester: FactionDef = {
 };
 
 beforeAll(() => {
-  loadContent([BASE_LAYER, { source: 'test', pack: { factions: [tester] } }]);
+  loadContent([BASE_LAYER, TEST_LAYER, { source: 'tester', pack: { factions: [tester] } }]);
 });
 afterAll(() => {
   loadContent([BASE_LAYER]);
@@ -55,7 +55,7 @@ afterAll(() => {
 
 const rows = ['.f~...', '......'];
 function game(units: MapUnitPlacement[] = [{ type: 'pikeman', owner: 0, x: 0, y: 0 }, { type: 'pikeman', owner: 1, x: 5, y: 1 }], buildings = [] as { type: string; x: number; y: number; owner: number | null }[]) {
-  return makeGame(rows, units, { players: [{ faction: 'tester', controller: 'human' }, { faction: 'ember', controller: 'ai' }] }, { buildings });
+  return makeGame(rows, units, { players: [{ faction: 'tester', controller: 'human' }, { faction: 'beta', controller: 'ai' }] }, { buildings });
 }
 
 describe('unit stats', () => {
@@ -65,7 +65,7 @@ describe('unit stats', () => {
     expect(unitStatsFor('tester', 'pikeman').move).toBe(6);
     expect(unitStatsFor('tester', 'archer').range).toEqual([2, 3]);
     expect(unitStatsFor('tester', 'catapult').cost).toBe(200);
-    expect(unitStatsFor('ember', 'rider').attack).toBe(7); // other factions unaffected
+    expect(unitStatsFor('beta', 'rider').attack).toBe(7); // other factions unaffected
   });
 
   it('are used for units in play', () => {
@@ -145,7 +145,7 @@ describe('rosters', () => {
 
   it('only allow building units from the faction roster', () => {
     const s = makeGame(rows, [{ type: 'pikeman', owner: 0, x: 0, y: 0 }, { type: 'pikeman', owner: 1, x: 5, y: 1 }], {
-      players: [{ faction: 'tester', controller: 'human' }, { faction: 'ember', controller: 'ai' }],
+      players: [{ faction: 'tester', controller: 'human' }, { faction: 'beta', controller: 'ai' }],
     }, { buildings: [{ type: 'barracks', x: 3, y: 1, owner: 0 }], startingGold: 1000 });
     expect(() => applyOrThrow(s, { type: 'build', buildingId: 1, unitType: 'archer' })).toThrow();
     const r = applyOrThrow(s, { type: 'build', buildingId: 1, unitType: 'scout' });
